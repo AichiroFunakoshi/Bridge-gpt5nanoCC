@@ -439,6 +439,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
+      // ストリーミング完了後、残留データをクリア
+      if (carry.trim()) {
+        console.warn('SSE残留データ（不完全なイベント）:', carry);
+        carry = '';
+      }
+
       if (!translatedTextEl.textContent && out) translatedTextEl.textContent = out;
 
       // FINALモード完了時、FASTモードのキャッシュをリセット
