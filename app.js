@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Speech
   let recognition = null;
   let isRecording = false;
+  let recognitionError = false; // 音声認識エラーフラグ
 
   // Streaming
   let currentTranslationController = null;
@@ -188,10 +189,16 @@ document.addEventListener('DOMContentLoaded', () => {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => { listeningIndicator?.classList.add('visible'); };
+    recognition.onstart = () => {
+      listeningIndicator?.classList.add('visible');
+      recognitionError = false; // 開始時にエラーフラグをリセット
+    };
     recognition.onend = () => {
       listeningIndicator?.classList.remove('visible');
-      if (isRecording) { try { recognition.start(); } catch (e) { console.error('音声認識の再開に失敗', e); } }
+      // エラー状態でない場合のみ自動再開
+      if (isRecording && !recognitionError) {
+        try { recognition.start(); } catch (e) { console.error('音声認識の再開に失敗', e); }
+      }
     };
 
     recognition.onresult = (event) => {
@@ -242,6 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     recognition.onerror = (event) => {
       console.error('音声認識エラー', event?.error);
+      // 重大なエラーの場合、自動再開を防止
+      if (event?.error === 'audio-capture' || event?.error === 'not-allowed') {
+        recognitionError = true;
+      }
       if (event?.error === 'audio-capture') {
         setStatus('マイクが検出されません', ['error']);
         errEl.textContent = 'デバイス設定を確認してください。';
