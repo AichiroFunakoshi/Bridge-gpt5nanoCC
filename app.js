@@ -370,11 +370,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let carry = '', out = '';
-
-      if (mode === 'final') translatedTextEl.textContent = '';
+      let firstChunk = true; // FINALモード時の初回チャンクフラグ
 
       const flushChunk = (delta) => {
         if (!delta) return;
+        // FINALモード時、最初のデルタでクリア（ちらつき軽減）
+        if (mode === 'final' && firstChunk) {
+          translatedTextEl.textContent = '';
+          out = '';
+          firstChunk = false;
+        }
         out += delta;
         translatedTextEl.textContent = out;
       };
