@@ -122,7 +122,12 @@ document.addEventListener('DOMContentLoaded', () => {
       location.reload();
     }
   });
-  apiModal?.addEventListener('click', (e) => { if (e.target === apiModal) apiModal.style.display = 'none'; });
+  apiModal?.addEventListener('click', (e) => {
+    // APIキー未設定時はモーダル外クリックでも閉じない
+    if (e.target === apiModal && OPENAI_API_KEY) {
+      apiModal.style.display = 'none';
+    }
+  });
 
   function changeFontSize(size) {
     ['size-small','size-medium','size-large','size-xlarge'].forEach(c => {
