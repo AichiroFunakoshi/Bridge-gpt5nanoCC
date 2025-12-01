@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const OPTIMAL_DEBOUNCE = { ja: 346, en: 154 };
   const WINDOW_CHARS = { ja: 120, en: 90 };
   const SENTENCE_END_RE = /[。．\.！？!?]\s*$/;
+  const MAX_PROCESSED_IDS = 100; // メモリリーク防止: 処理済みID上限
 
   const japaneseFormatter = {
     addPeriod(t) { return (t && !/[。.?？！!]$/.test(t)) ? t + '。' : t; },
@@ -193,7 +194,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result.isFinal) {
           hasFinal = true;
           if (!processedResultIds.has(resultId)) {
-            processedResultIds.add(resultId); hasNewContent = true;
+            processedResultIds.add(resultId);
+            // メモリリーク防止: 上限を超えたら古いIDを削除
+            if (processedResultIds.size > MAX_PROCESSED_IDS) {
+              const firstId = processedResultIds.values().next().value;
+              processedResultIds.delete(firstId);
+            }
+            hasNewContent = true;
             finalText += (selectedLanguage === 'ja') ? (japaneseFormatter.format(transcript) + ' ') : (transcript + ' ');
           } else {
             finalText += transcript + ' ';
