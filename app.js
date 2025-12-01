@@ -102,6 +102,11 @@ document.addEventListener('DOMContentLoaded', () => {
   saveApiKeysBtn?.addEventListener('click', () => {
     const k = (openaiKeyInput.value || '').trim();
     if (!k) { alert('OpenAI APIキーを入力してください。'); return; }
+    // APIキー形式検証（sk-で始まるか、最低限の長さチェック）
+    if (!k.startsWith('sk-') || k.length < 20) {
+      alert('無効なOpenAI APIキー形式です。\nAPIキーは「sk-」で始まり、十分な長さが必要です。');
+      return;
+    }
     localStorage.setItem('translatorOpenaiKey', k);
     OPENAI_API_KEY = k;
     apiModal.style.display = 'none';
