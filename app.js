@@ -294,7 +294,13 @@ document.addEventListener('DOMContentLoaded', () => {
     try { recognition.stop(); } catch (e) { console.error('音声認識停止エラー', e); }
     setTimeout(() => { setStatus('待機中', ['idle'], ['processing']); }, 800);
     clearDebounce();
-    if (currentTranslationController) { try { currentTranslationController.abort(); } catch{} currentTranslationController = null; }
+    if (currentTranslationController) {
+      try { currentTranslationController.abort(); } catch{}
+      currentTranslationController = null;
+      // 翻訳中断時のインジケーターをクリア
+      translationInProgress = false;
+      translatingIndicator?.classList.remove('visible');
+    }
   }
 
   function sliceForLatency(text, isFinal) {
@@ -331,6 +337,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (translationInProgress && currentTranslationController) {
       try { currentTranslationController.abort(); } catch {}
       currentTranslationController = null;
+      // 前回の翻訳状態をクリア
+      translationInProgress = false;
+      translatingIndicator?.classList.remove('visible');
     }
 
     translationInProgress = true;
