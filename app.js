@@ -68,6 +68,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
       let out = t;
       for (const p of rules) out = out.replace(p.s, p.r);
+      // 重複した読点を削除（、、→、）
+      out = out.replace(/、+/g, '、');
       return out;
     },
     format(t) { if (!t || !t.trim()) return t; return this.addPeriod(this.addCommas(t)); }
