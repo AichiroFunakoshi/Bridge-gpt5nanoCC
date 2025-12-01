@@ -51,6 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const SENTENCE_END_RE = /[。．\.！？!?]\s*$/;
   const MAX_PROCESSED_IDS = 100; // メモリリーク防止: 処理済みID上限
 
+  const SYSTEM_PROMPT = `あなたは日本語と英語の専門的な同時通訳者です。
+- 日本語↔英語の双方向翻訳を行う
+- フィラーや冗長表現を除去
+- 固有名詞・専門用語を正確に保持
+- 逐次的に自然な短文で返す
+- 出力は翻訳文のみ（前置き・説明・ラベル禁止）`;
+
   const japaneseFormatter = {
     addPeriod(t) { return (t && !/[。.?？！!]$/.test(t)) ? t + '。' : t; },
     addCommas(t) {
@@ -140,13 +147,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fontSizeXLargeBtn?.addEventListener('click', () => changeFontSize('xlarge'));
 
     changeFontSize(localStorage.getItem('translatorFontSize') || 'medium');
-
-    window.SYSTEM_PROMPT = `あなたは日本語と英語の専門的な同時通訳者です。
-- 日本語↔英語の双方向翻訳を行う
-- フィラーや冗長表現を除去
-- 固有名詞・専門用語を正確に保持
-- 逐次的に自然な短文で返す
-- 出力は翻訳文のみ（前置き・説明・ラベル禁止）`;
 
     setStatus('待機中', ['idle']);
   }
@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dst = (selectedLanguage === 'ja') ? '英語' : '日本語';
     return {
       model: 'gpt-5-nano',
-      instructions: `${window.SYSTEM_PROMPT}\n\n【タスク】次の${src}を${dst}に翻訳せよ。翻訳文のみを即時・逐次出力する。`,
+      instructions: `${SYSTEM_PROMPT}\n\n【タスク】次の${src}を${dst}に翻訳せよ。翻訳文のみを即時・逐次出力する。`,
       input: inputText,
       stream: true,
       text: { verbosity: 'low' },
