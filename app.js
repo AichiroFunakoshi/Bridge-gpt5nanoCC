@@ -404,6 +404,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (!translatedTextEl.textContent && out) translatedTextEl.textContent = out;
 
+      // FINALモード完了時、FASTモードのキャッシュをリセット
+      if (mode === 'final') {
+        lastSubmittedFast = '';
+      }
+
     } catch (e) {
       if (e.name !== 'AbortError') {
         console.error('翻訳エラー:', e);
