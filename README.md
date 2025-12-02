@@ -2,7 +2,7 @@
 
 # Bridge (Ver.5-nano) — デバウンス最適化リアルタイム音声翻訳
 
-[![GitHub](https://img.shields.io/badge/GitHub-Bridge--Ver.5--nano--debounce--optimized-blue?logo=github)](https://github.com/AichiroFunakoshi/Bridge-Ver.5-nano-debounce-optimized)
+[![GitHub](https://img.shields.io/badge/GitHub-Bridge--gpt5nanoCC-blue?logo=github)](https://github.com/AichiroFunakoshi/Bridge-gpt5nanoCC)
 
 日本語⇄英語の **リアルタイム音声翻訳アプリ（PWA対応）** です。  
 GPT-5-nano を翻訳エンジンに採用し、**デバウンス最適化 (Adaptive Debounce)** によるリアルタイム性向上と、洗練された白背景 UI を実現しました。
@@ -28,7 +28,7 @@ GPT-5-nano を翻訳エンジンに採用し、**デバウンス最適化 (Adapt
 
 ## 📂 プロジェクト構成
 ```
-Bridge-Ver.5-nano-debounce-optimized/
+Bridge-gpt5nanoCC/
 ├── app.js          # GPT-5-nano対応、Adaptive Debounce 実装
 ├── index.html      # UI構成（白背景、設定モーダル）
 ├── style.css       # UIスタイル（Ver.4.1基準）
@@ -41,8 +41,8 @@ Bridge-Ver.5-nano-debounce-optimized/
 ## 🚀 セットアップ
 1. リポジトリをクローン
    ```bash
-   git clone https://github.com/AichiroFunakoshi/Bridge-Ver.5-nano-debounce-optimized.git
-   cd Bridge-Ver.5-nano-debounce-optimized
+   git clone https://github.com/AichiroFunakoshi/Bridge-gpt5nanoCC.git
+   cd Bridge-gpt5nanoCC
    ```
 
 2. ローカルサーバで起動（例: Python）
