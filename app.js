@@ -7,26 +7,40 @@ document.addEventListener('DOMContentLoaded', () => {
   const DEFAULT_OPENAI_API_KEY = '';
   let OPENAI_API_KEY = '';
 
-  // DOM
+  // DOM - Screens
+  const initialScreen = document.getElementById('initialScreen');
+  const recordingScreen = document.getElementById('recordingScreen');
+
+  // DOM - Buttons
   const startJapaneseBtn = document.getElementById('startJapaneseBtn');
   const startEnglishBtn = document.getElementById('startEnglishBtn');
   const stopBtn = document.getElementById('stopBtn');
   const stopBtnText = document.getElementById('stopBtnText');
   const resetBtn = document.getElementById('resetBtn');
+  const resetBtnText = document.getElementById('resetBtnText');
+  const settingsButton = document.getElementById('settingsButton');
+  const saveApiKeysBtn = document.getElementById('saveApiKeys');
+  const resetKeysBtn = document.getElementById('resetKeys');
+
+  // DOM - Display Elements
   const statusEl = document.getElementById('status');
   const errEl = document.getElementById('errorMessage');
   const originalTextEl = document.getElementById('originalText');
   const translatedTextEl = document.getElementById('translatedText');
   const sourceLangEl = document.getElementById('sourceLanguage');
   const targetLangEl = document.getElementById('targetLanguage');
-  const apiModal = document.getElementById('apiModal');
-  const settingsButton = document.getElementById('settingsButton');
-  const openaiKeyInput = document.getElementById('openaiKey');
-  const saveApiKeysBtn = document.getElementById('saveApiKeys');
-  const resetKeysBtn = document.getElementById('resetKeys');
   const listeningIndicator = document.getElementById('listeningIndicator');
   const translatingIndicator = document.getElementById('translatingIndicator');
+  const listeningText = document.getElementById('listeningText');
+  const translatingText = document.getElementById('translatingText');
+  const originalLabel = document.getElementById('originalLabel');
+  const translatedLabel = document.getElementById('translatedLabel');
 
+  // DOM - Modal
+  const apiModal = document.getElementById('apiModal');
+  const openaiKeyInput = document.getElementById('openaiKey');
+
+  // DOM - Font Controls
   const fontSizeSmallBtn = document.getElementById('fontSizeSmall');
   const fontSizeMediumBtn = document.getElementById('fontSizeMedium');
   const fontSizeLargeBtn = document.getElementById('fontSizeLarge');
@@ -59,6 +73,30 @@ document.addEventListener('DOMContentLoaded', () => {
 - 逐次的に自然な短文で返す
 - 出力は翻訳文のみ（前置き・説明・ラベル禁止）`;
 
+  // Bilingual UI Text
+  const UI_TEXT = {
+    ja: {
+      listening: '聞き取り中',
+      translating: '翻訳中',
+      original: '原文',
+      translated: '翻訳結果',
+      stop: '停止',
+      reset: 'リセット',
+      sourceLanguage: '日本語',
+      targetLanguage: '英語'
+    },
+    en: {
+      listening: 'Listening',
+      translating: 'Translating',
+      original: 'Original',
+      translated: 'Translation',
+      stop: 'Stop',
+      reset: 'Reset',
+      sourceLanguage: 'English',
+      targetLanguage: 'Japanese'
+    }
+  };
+
   const japaneseFormatter = {
     addPeriod(t) { return (t && !/[。.?？！!]$/.test(t)) ? t + '。' : t; },
     addCommas(t) {
@@ -90,16 +128,43 @@ document.addEventListener('DOMContentLoaded', () => {
     clsRemove.forEach(c => statusEl.classList.remove(c));
   }
 
+  // Screen Management
+  function showInitialScreen() {
+    initialScreen?.classList.remove('screen-hidden');
+    recordingScreen?.classList.add('screen-hidden');
+  }
+
+  function showRecordingScreen() {
+    initialScreen?.classList.add('screen-hidden');
+    recordingScreen?.classList.remove('screen-hidden');
+  }
+
+  // Update UI Text based on selected language
+  function updateUIText(lang) {
+    const text = UI_TEXT[lang];
+    if (!text) return;
+
+    listeningText.textContent = text.listening;
+    translatingText.textContent = text.translating;
+    originalLabel.textContent = text.original;
+    translatedLabel.textContent = text.translated;
+    stopBtnText.textContent = text.stop;
+    resetBtnText.textContent = text.reset;
+    sourceLangEl.textContent = text.sourceLanguage;
+    targetLangEl.textContent = text.targetLanguage;
+  }
+
   function loadApiKeys() {
     const stored = localStorage.getItem('translatorOpenaiKey');
     OPENAI_API_KEY = stored ? stored.trim() : '';
     if (!OPENAI_API_KEY) {
       openaiKeyInput.value = DEFAULT_OPENAI_API_KEY;
-      apiModal.style.display = 'flex';
+      apiModal?.setAttribute('aria-hidden', 'false');
     } else {
       initializeApp();
     }
   }
+
   saveApiKeysBtn?.addEventListener('click', () => {
     const k = (openaiKeyInput.value || '').trim();
     if (!k) { alert('OpenAI APIキーを入力してください。'); return; }
@@ -110,33 +175,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     localStorage.setItem('translatorOpenaiKey', k);
     OPENAI_API_KEY = k;
-    apiModal.style.display = 'none';
+    apiModal?.setAttribute('aria-hidden', 'true');
     initializeApp();
   });
+
   settingsButton?.addEventListener('click', () => {
     openaiKeyInput.value = OPENAI_API_KEY;
-    apiModal.style.display = 'flex';
+    apiModal?.setAttribute('aria-hidden', 'false');
   });
+
   resetKeysBtn?.addEventListener('click', () => {
     if (confirm('APIキーをリセットしますか？')) {
       localStorage.removeItem('translatorOpenaiKey');
       location.reload();
     }
   });
+
   apiModal?.addEventListener('click', (e) => {
     // APIキー未設定時はモーダル外クリックでも閉じない
     if (e.target === apiModal && OPENAI_API_KEY) {
-      apiModal.style.display = 'none';
+      apiModal?.setAttribute('aria-hidden', 'true');
     }
   });
 
   function changeFontSize(size) {
+    // Update text size
     ['size-small','size-medium','size-large','size-xlarge'].forEach(c => {
       originalTextEl.classList.remove(c);
       translatedTextEl.classList.remove(c);
     });
     originalTextEl.classList.add(`size-${size}`);
     translatedTextEl.classList.add(`size-${size}`);
+
+    // Update button active states
+    [fontSizeSmallBtn, fontSizeMediumBtn, fontSizeLargeBtn, fontSizeXLargeBtn].forEach(btn => {
+      btn?.classList.remove('font-btn-active');
+    });
+    if (size === 'small') fontSizeSmallBtn?.classList.add('font-btn-active');
+    else if (size === 'medium') fontSizeMediumBtn?.classList.add('font-btn-active');
+    else if (size === 'large') fontSizeLargeBtn?.classList.add('font-btn-active');
+    else if (size === 'xlarge') fontSizeXLargeBtn?.classList.add('font-btn-active');
+
     localStorage.setItem('translatorFontSize', size);
   }
 
@@ -167,13 +246,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resetContent() {
+    // Stop recording if active
+    if (isRecording) {
+      isRecording = false;
+      document.body.classList.remove('recording');
+      try { recognition?.stop(); } catch (e) { console.error('音声認識停止エラー', e); }
+    }
+
+    // Clear all content and state
     processedResultIds.clear();
     lastSubmittedFast = '';
     originalTextEl.textContent = '';
     translatedTextEl.textContent = '';
     errEl.textContent = '';
     clearDebounce();
-    if (currentTranslationController) { try { currentTranslationController.abort(); } catch{} currentTranslationController = null; }
+
+    // Cancel any ongoing translation
+    if (currentTranslationController) {
+      try { currentTranslationController.abort(); } catch{}
+      currentTranslationController = null;
+    }
+
+    // Hide indicators
+    translationInProgress = false;
+    listeningIndicator?.classList.remove('visible');
+    translatingIndicator?.classList.remove('visible');
+
+    // Return to initial screen
+    showInitialScreen();
     setStatus('待機中', ['idle']);
   }
 
@@ -232,9 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const displayText = (finalText + interimText).trim();
       originalTextEl.textContent = displayText;
 
-      if (selectedLanguage === 'ja') { sourceLangEl.textContent = '日本語'; targetLangEl.textContent = '英語'; }
-      else { sourceLangEl.textContent = '英語'; targetLangEl.textContent = '日本語'; }
-
       if (!hasNewContent) return;
 
       clearDebounce();
@@ -265,26 +362,6 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  function updateButtons(recording) {
-    if (recording) {
-      startJapaneseBtn.style.display = 'none';
-      startEnglishBtn.style.display = 'none';
-      stopBtn.style.display = 'flex';
-      stopBtn.disabled = false;
-      resetBtn.disabled = true;
-      resetBtn.style.opacity = '0.5';
-    } else {
-      startJapaneseBtn.style.display = 'flex';
-      startEnglishBtn.style.display = 'flex';
-      startJapaneseBtn.disabled = false;
-      startEnglishBtn.disabled = false;
-      stopBtn.style.display = 'none';
-      stopBtn.disabled = true;
-      resetBtn.disabled = false;
-      resetBtn.style.opacity = '1';
-    }
-  }
-
   async function startRecording(lang) {
     errEl.textContent = '';
     selectedLanguage = lang;
@@ -293,12 +370,13 @@ document.addEventListener('DOMContentLoaded', () => {
     originalTextEl.textContent = '';
     translatedTextEl.textContent = '';
 
-    if (lang === 'ja') { sourceLangEl.textContent = '日本語'; targetLangEl.textContent = '英語'; stopBtnText.textContent = '停止'; }
-    else { sourceLangEl.textContent = '英語'; targetLangEl.textContent = '日本語'; stopBtnText.textContent = 'Stop'; }
+    // Switch to recording screen and update UI text
+    showRecordingScreen();
+    updateUIText(lang);
 
-    isRecording = true; document.body.classList.add('recording');
+    isRecording = true;
+    document.body.classList.add('recording');
     setStatus('録音中', ['recording'], ['idle','error']);
-    updateButtons(true);
 
     try {
       recognition.lang = (lang === 'ja') ? 'ja-JP' : 'en-US';
@@ -311,12 +389,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function stopRecording() {
-    isRecording = false; document.body.classList.remove('recording');
+    isRecording = false;
+    document.body.classList.remove('recording');
     setStatus('処理中', ['processing'], ['recording']);
-    updateButtons(false);
+
     try { recognition.stop(); } catch (e) { console.error('音声認識停止エラー', e); }
     setTimeout(() => { setStatus('待機中', ['idle'], ['processing']); }, 800);
     clearDebounce();
+
     if (currentTranslationController) {
       try { currentTranslationController.abort(); } catch{}
       currentTranslationController = null;
