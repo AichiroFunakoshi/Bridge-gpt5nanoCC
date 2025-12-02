@@ -219,6 +219,32 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('translatorFontSize', size);
   }
 
+  // Event listeners - Register only once
+  startJapaneseBtn?.addEventListener('click', () => {
+    if (!OPENAI_API_KEY) {
+      alert('OpenAI APIキーが設定されていません。');
+      apiModal?.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    startRecording('ja');
+  });
+
+  startEnglishBtn?.addEventListener('click', () => {
+    if (!OPENAI_API_KEY) {
+      alert('OpenAI APIキーが設定されていません。');
+      apiModal?.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    startRecording('en');
+  });
+
+  stopBtn?.addEventListener('click', stopRecording);
+  resetBtn?.addEventListener('click', resetContent);
+  fontSizeSmallBtn?.addEventListener('click', () => changeFontSize('small'));
+  fontSizeMediumBtn?.addEventListener('click', () => changeFontSize('medium'));
+  fontSizeLargeBtn?.addEventListener('click', () => changeFontSize('large'));
+  fontSizeXLargeBtn?.addEventListener('click', () => changeFontSize('xlarge'));
+
   function initializeApp() {
     errEl.textContent = '';
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
@@ -226,15 +252,11 @@ document.addEventListener('DOMContentLoaded', () => {
       errEl.textContent = 'Chrome、Safari、またはEdgeをご利用ください。';
       return;
     }
-    setupSpeechRecognition();
-    startJapaneseBtn?.addEventListener('click', () => startRecording('ja'));
-    startEnglishBtn?.addEventListener('click', () => startRecording('en'));
-    stopBtn?.addEventListener('click', stopRecording);
-    resetBtn?.addEventListener('click', resetContent);
-    fontSizeSmallBtn?.addEventListener('click', () => changeFontSize('small'));
-    fontSizeMediumBtn?.addEventListener('click', () => changeFontSize('medium'));
-    fontSizeLargeBtn?.addEventListener('click', () => changeFontSize('large'));
-    fontSizeXLargeBtn?.addEventListener('click', () => changeFontSize('xlarge'));
+
+    // Setup speech recognition only once
+    if (!recognition) {
+      setupSpeechRecognition();
+    }
 
     changeFontSize(localStorage.getItem('translatorFontSize') || 'medium');
 
@@ -363,6 +385,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function startRecording(lang) {
+    // Prevent starting if already recording
+    if (isRecording) {
+      console.warn('Already recording, ignoring start request');
+      return;
+    }
+
     errEl.textContent = '';
     selectedLanguage = lang;
     processedResultIds.clear();
@@ -384,7 +412,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       console.error('音声認識開始エラー', e);
       errEl.textContent = '音声認識の開始に失敗しました: ' + (e?.message || e);
-      stopRecording();
+      isRecording = false;
+      showInitialScreen();
+      setStatus('エラー', ['error']);
     }
   }
 
