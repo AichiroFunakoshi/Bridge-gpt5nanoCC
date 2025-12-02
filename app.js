@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Speech
   let recognition = null;
   let isRecording = false;
+  let recognitionError = false; // 音声認識エラーフラグ
 
   // Streaming
   let currentTranslationController = null;
@@ -49,6 +50,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const OPTIMAL_DEBOUNCE = { ja: 346, en: 154 };
   const WINDOW_CHARS = { ja: 120, en: 90 };
   const SENTENCE_END_RE = /[。．\.！？!?]\s*$/;
+  const MAX_PROCESSED_IDS = 100; // メモリリーク防止: 処理済みID上限
+
+  const SYSTEM_PROMPT = `あなたは日本語と英語の専門的な同時通訳者です。
+- 日本語↔英語の双方向翻訳を行う
+- フィラーや冗長表現を除去
+- 固有名詞・専門用語を正確に保持
+- 逐次的に自然な短文で返す
+- 出力は翻訳文のみ（前置き・説明・ラベル禁止）`;
 
   const japaneseFormatter = {
     addPeriod(t) { return (t && !/[。.?？！!]$/.test(t)) ? t + '。' : t; },
@@ -67,6 +76,8 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
       let out = t;
       for (const p of rules) out = out.replace(p.s, p.r);
+      // 重複した読点を削除（、、→、）
+      out = out.replace(/、+/g, '、');
       return out;
     },
     format(t) { if (!t || !t.trim()) return t; return this.addPeriod(this.addCommas(t)); }
@@ -92,6 +103,11 @@ document.addEventListener('DOMContentLoaded', () => {
   saveApiKeysBtn?.addEventListener('click', () => {
     const k = (openaiKeyInput.value || '').trim();
     if (!k) { alert('OpenAI APIキーを入力してください。'); return; }
+    // APIキー形式検証（sk-で始まるか、最低限の長さチェック）
+    if (!k.startsWith('sk-') || k.length < 20) {
+      alert('無効なOpenAI APIキー形式です。\nAPIキーは「sk-」で始まり、十分な長さが必要です。');
+      return;
+    }
     localStorage.setItem('translatorOpenaiKey', k);
     OPENAI_API_KEY = k;
     apiModal.style.display = 'none';
@@ -107,7 +123,12 @@ document.addEventListener('DOMContentLoaded', () => {
       location.reload();
     }
   });
-  apiModal?.addEventListener('click', (e) => { if (e.target === apiModal) apiModal.style.display = 'none'; });
+  apiModal?.addEventListener('click', (e) => {
+    // APIキー未設定時はモーダル外クリックでも閉じない
+    if (e.target === apiModal && OPENAI_API_KEY) {
+      apiModal.style.display = 'none';
+    }
+  });
 
   function changeFontSize(size) {
     ['size-small','size-medium','size-large','size-xlarge'].forEach(c => {
@@ -137,13 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
     fontSizeXLargeBtn?.addEventListener('click', () => changeFontSize('xlarge'));
 
     changeFontSize(localStorage.getItem('translatorFontSize') || 'medium');
-
-    window.SYSTEM_PROMPT = `あなたは日本語と英語の専門的な同時通訳者です。
-- 日本語↔英語の双方向翻訳を行う
-- フィラーや冗長表現を除去
-- 固有名詞・専門用語を正確に保持
-- 逐次的に自然な短文で返す
-- 出力は翻訳文のみ（前置き・説明・ラベル禁止）`;
 
     setStatus('待機中', ['idle']);
   }
@@ -175,10 +189,16 @@ document.addEventListener('DOMContentLoaded', () => {
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
-    recognition.onstart = () => { listeningIndicator?.classList.add('visible'); };
+    recognition.onstart = () => {
+      listeningIndicator?.classList.add('visible');
+      recognitionError = false; // 開始時にエラーフラグをリセット
+    };
     recognition.onend = () => {
       listeningIndicator?.classList.remove('visible');
-      if (isRecording) { try { recognition.start(); } catch (e) { console.error('音声認識の再開に失敗', e); } }
+      // エラー状態でない場合のみ自動再開
+      if (isRecording && !recognitionError) {
+        try { recognition.start(); } catch (e) { console.error('音声認識の再開に失敗', e); }
+      }
     };
 
     recognition.onresult = (event) => {
@@ -193,7 +213,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result.isFinal) {
           hasFinal = true;
           if (!processedResultIds.has(resultId)) {
-            processedResultIds.add(resultId); hasNewContent = true;
+            processedResultIds.add(resultId);
+            // メモリリーク防止: 上限を超えたら古いIDを削除
+            if (processedResultIds.size > MAX_PROCESSED_IDS) {
+              const firstId = processedResultIds.values().next().value;
+              processedResultIds.delete(firstId);
+            }
+            hasNewContent = true;
             finalText += (selectedLanguage === 'ja') ? (japaneseFormatter.format(transcript) + ' ') : (transcript + ' ');
           } else {
             finalText += transcript + ' ';
@@ -223,6 +249,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     recognition.onerror = (event) => {
       console.error('音声認識エラー', event?.error);
+      // 重大なエラーの場合、自動再開を防止
+      if (event?.error === 'audio-capture' || event?.error === 'not-allowed') {
+        recognitionError = true;
+      }
       if (event?.error === 'audio-capture') {
         setStatus('マイクが検出されません', ['error']);
         errEl.textContent = 'デバイス設定を確認してください。';
@@ -287,7 +317,13 @@ document.addEventListener('DOMContentLoaded', () => {
     try { recognition.stop(); } catch (e) { console.error('音声認識停止エラー', e); }
     setTimeout(() => { setStatus('待機中', ['idle'], ['processing']); }, 800);
     clearDebounce();
-    if (currentTranslationController) { try { currentTranslationController.abort(); } catch{} currentTranslationController = null; }
+    if (currentTranslationController) {
+      try { currentTranslationController.abort(); } catch{}
+      currentTranslationController = null;
+      // 翻訳中断時のインジケーターをクリア
+      translationInProgress = false;
+      translatingIndicator?.classList.remove('visible');
+    }
   }
 
   function sliceForLatency(text, isFinal) {
@@ -309,7 +345,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const dst = (selectedLanguage === 'ja') ? '英語' : '日本語';
     return {
       model: 'gpt-5-nano',
-      instructions: `${window.SYSTEM_PROMPT}\n\n【タスク】次の${src}を${dst}に翻訳せよ。翻訳文のみを即時・逐次出力する。`,
+      instructions: `${SYSTEM_PROMPT}\n\n【タスク】次の${src}を${dst}に翻訳せよ。翻訳文のみを即時・逐次出力する。`,
       input: inputText,
       stream: true,
       text: { verbosity: 'low' },
@@ -324,6 +360,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (translationInProgress && currentTranslationController) {
       try { currentTranslationController.abort(); } catch {}
       currentTranslationController = null;
+      // 前回の翻訳状態をクリア
+      translationInProgress = false;
+      translatingIndicator?.classList.remove('visible');
     }
 
     translationInProgress = true;
@@ -354,11 +393,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let carry = '', out = '';
-
-      if (mode === 'final') translatedTextEl.textContent = '';
+      let firstChunk = true; // FINALモード時の初回チャンクフラグ
 
       const flushChunk = (delta) => {
         if (!delta) return;
+        // FINALモード時、最初のデルタでクリア（ちらつき軽減）
+        if (mode === 'final' && firstChunk) {
+          translatedTextEl.textContent = '';
+          out = '';
+          firstChunk = false;
+        }
         out += delta;
         translatedTextEl.textContent = out;
       };
@@ -395,7 +439,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
+      // ストリーミング完了後、残留データをクリア
+      if (carry.trim()) {
+        console.warn('SSE残留データ（不完全なイベント）:', carry);
+        carry = '';
+      }
+
       if (!translatedTextEl.textContent && out) translatedTextEl.textContent = out;
+
+      // FINALモード完了時、FASTモードのキャッシュをリセット
+      if (mode === 'final') {
+        lastSubmittedFast = '';
+      }
 
     } catch (e) {
       if (e.name !== 'AbortError') {
