@@ -228,16 +228,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (parsed && typeof parsed === 'object') {
           // 日本語履歴の検証
           if (Array.isArray(parsed.ja)) {
-            debounceHistory.ja = parsed.ja.filter(item =>
-              item && typeof item.f === 'number' && typeof item.t === 'number'
-            );
+            debounceHistory.ja = parsed.ja
+              .filter(item => item && typeof item.f === 'number' && typeof item.t === 'number')
+              .slice(-DEBOUNCE_CONFIG.MAX_HISTORY_SIZE); // 最新100件のみ保持
           }
 
           // 英語履歴の検証
           if (Array.isArray(parsed.en)) {
-            debounceHistory.en = parsed.en.filter(item =>
-              item && typeof item.f === 'number' && typeof item.t === 'number'
-            );
+            debounceHistory.en = parsed.en
+              .filter(item => item && typeof item.f === 'number' && typeof item.t === 'number')
+              .slice(-DEBOUNCE_CONFIG.MAX_HISTORY_SIZE); // 最新100件のみ保持
           }
         }
       } catch (e) {
@@ -547,7 +547,10 @@ document.addEventListener('DOMContentLoaded', () => {
       message += `(${results.stats.en.samples}件のデータから算出)\n\n`;
     }
 
-    message += '📦 履歴データをクリアしました\n';
+    // 設定に応じてメッセージを変更
+    if (DEBOUNCE_CONFIG.CLEAR_AFTER_OPTIMIZATION) {
+      message += '📦 履歴データをクリアしました\n';
+    }
     message += '新しい設定が適用されました';
 
     alert(message);
