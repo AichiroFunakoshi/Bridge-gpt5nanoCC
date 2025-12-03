@@ -113,6 +113,33 @@
       <label for="openaiKey" class="input-label">OpenAI API Key</label>
       <input id="openaiKey" type="text" class="input-field" placeholder="sk-..." autocomplete="off" />
 
+      <!-- デバウンス最適化セクション -->
+      <div class="debounce-section">
+        <h4 class="section-title">デバウンス最適化</h4>
+        <p class="section-desc">使用履歴からあなたに最適な応答速度を自動調整します。</p>
+
+        <div class="debounce-info">
+          <div class="info-row">
+            <span class="info-label">現在の設定:</span>
+            <span class="info-value">
+              日本語 <strong id="currentJa">346ms</strong> /
+              英語 <strong id="currentEn">154ms</strong>
+            </span>
+          </div>
+
+          <div class="info-row">
+            <span class="info-label">収集データ:</span>
+            <span class="info-value">
+              日本語 <span id="historyJaCount">0</span>件 <span id="jaStatus" class="status-badge">⏳ あと50件</span> /
+              英語 <span id="historyEnCount">0</span>件 <span id="enStatus" class="status-badge">⏳ あと50件</span>
+            </span>
+          </div>
+        </div>
+
+        <button id="optimizeDebounceBtn" class="btn-secondary">最適化を実行</button>
+        <div id="optimizationResult" class="optimization-result" style="display: none;"></div>
+      </div>
+
       <div class="modal-actions">
         <button id="saveApiKeys" class="btn-primary">保存して開始</button>
       </div>

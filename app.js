@@ -40,6 +40,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const apiModal = document.getElementById('apiModal');
   const openaiKeyInput = document.getElementById('openaiKey');
 
+  // DOM - Debounce Optimization
+  const optimizeDebounceBtn = document.getElementById('optimizeDebounceBtn');
+  const currentJaEl = document.getElementById('currentJa');
+  const currentEnEl = document.getElementById('currentEn');
+  const historyJaCountEl = document.getElementById('historyJaCount');
+  const historyEnCountEl = document.getElementById('historyEnCount');
+  const jaStatusEl = document.getElementById('jaStatus');
+  const enStatusEl = document.getElementById('enStatus');
+  const optimizationResultEl = document.getElementById('optimizationResult');
+
   // DOM - Font Controls
   const fontSizeSmallBtn = document.getElementById('fontSizeSmall');
   const fontSizeMediumBtn = document.getElementById('fontSizeMedium');
@@ -61,7 +71,24 @@ document.addEventListener('DOMContentLoaded', () => {
   let lastSubmittedFast = '';
   let translationDebounceTimer = null;
 
-  const OPTIMAL_DEBOUNCE = { ja: 346, en: 154 };
+  // Debounce optimization configuration
+  const DEBOUNCE_CONFIG = {
+    MAX_HISTORY_SIZE: 100,        // 最大履歴件数
+    MIN_REQUIRED_SAMPLES: 30,     // 最適化に必要な最低件数
+    RECOMMENDED_SAMPLES: 50,      // 推奨件数
+    PERCENTILE: 0.70,             // 70パーセンタイル使用
+    CLEAR_AFTER_OPTIMIZATION: true // 最適化後にクリア
+  };
+
+  const STORAGE_KEYS = {
+    HISTORY: 'debounceHistory_v1',
+    OPTIMIZED: 'optimizedDebounce_v1'
+  };
+
+  let OPTIMAL_DEBOUNCE = { ja: 346, en: 154 }; // デフォルト値
+  let debounceHistory = { ja: [], en: [] };     // 履歴データ
+  let interimStartTime = null;                   // interim開始時刻
+
   const WINDOW_CHARS = { ja: 120, en: 90 };
   const SENTENCE_END_RE = /[。．\.！？!?]\s*$/;
   const MAX_PROCESSED_IDS = 100; // メモリリーク防止: 処理済みID上限
@@ -165,6 +192,166 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Debounce History Management
+  function loadDebounceData() {
+    // Load optimized debounce values
+    const optimized = localStorage.getItem(STORAGE_KEYS.OPTIMIZED);
+    if (optimized) {
+      try {
+        const data = JSON.parse(optimized);
+        OPTIMAL_DEBOUNCE.ja = data.ja || 346;
+        OPTIMAL_DEBOUNCE.en = data.en || 154;
+      } catch (e) {
+        console.warn('最適化データの読み込みに失敗', e);
+      }
+    }
+
+    // Load history
+    const history = localStorage.getItem(STORAGE_KEYS.HISTORY);
+    if (history) {
+      try {
+        debounceHistory = JSON.parse(history);
+      } catch (e) {
+        console.warn('履歴データの読み込みに失敗', e);
+        debounceHistory = { ja: [], en: [] };
+      }
+    }
+  }
+
+  function saveDebounceHistory() {
+    try {
+      localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(debounceHistory));
+    } catch (e) {
+      console.warn('履歴保存失敗（容量制限？）', e);
+      // 古いデータを削除して再試行
+      debounceHistory.ja = debounceHistory.ja.slice(-50);
+      debounceHistory.en = debounceHistory.en.slice(-50);
+      try {
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(debounceHistory));
+      } catch (e2) {
+        console.error('履歴保存失敗', e2);
+      }
+    }
+  }
+
+  function recordDebounceHistory(lang, duration) {
+    const history = debounceHistory[lang];
+
+    // 新しいデータを追加（キー名を短縮してメモリ削減）
+    history.push({
+      f: duration,      // finalDelay
+      t: Date.now()     // timestamp
+    });
+
+    // 最大件数を超えたら古いものを削除（FIFO）
+    if (history.length > DEBOUNCE_CONFIG.MAX_HISTORY_SIZE) {
+      history.shift();
+    }
+
+    // localStorage に保存
+    saveDebounceHistory();
+
+    // UI更新
+    updateDebounceDisplay();
+  }
+
+  function clearDebounceHistory() {
+    debounceHistory = { ja: [], en: [] };
+    localStorage.removeItem(STORAGE_KEYS.HISTORY);
+    console.log('✅ デバウンス履歴をクリアしました');
+  }
+
+  function calculateOptimalValue(history, lang) {
+    if (history.length < DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES) {
+      return null;
+    }
+
+    // finalDelayのみを使用
+    const delays = history.map(h => h.f).sort((a, b) => a - b);
+
+    // 70パーセンタイル値を使用
+    const index = Math.floor(delays.length * DEBOUNCE_CONFIG.PERCENTILE);
+    const optimal = delays[index];
+
+    // 範囲制限（極端な値を防ぐ）
+    const MIN_DEBOUNCE = lang === 'ja' ? 200 : 100;
+    const MAX_DEBOUNCE = lang === 'ja' ? 600 : 400;
+
+    return Math.max(MIN_DEBOUNCE, Math.min(MAX_DEBOUNCE, Math.round(optimal)));
+  }
+
+  function optimizeDebounce() {
+    const results = {
+      ja: null,
+      en: null,
+      stats: {}
+    };
+
+    // 日本語の最適化
+    if (debounceHistory.ja.length >= DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES) {
+      results.ja = calculateOptimalValue(debounceHistory.ja, 'ja');
+      results.stats.ja = {
+        samples: debounceHistory.ja.length,
+        recommended: debounceHistory.ja.length >= DEBOUNCE_CONFIG.RECOMMENDED_SAMPLES
+      };
+    }
+
+    // 英語の最適化
+    if (debounceHistory.en.length >= DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES) {
+      results.en = calculateOptimalValue(debounceHistory.en, 'en');
+      results.stats.en = {
+        samples: debounceHistory.en.length,
+        recommended: debounceHistory.en.length >= DEBOUNCE_CONFIG.RECOMMENDED_SAMPLES
+      };
+    }
+
+    // 最適値を適用
+    if (results.ja) OPTIMAL_DEBOUNCE.ja = results.ja;
+    if (results.en) OPTIMAL_DEBOUNCE.en = results.en;
+
+    // localStorageに保存
+    localStorage.setItem(
+      STORAGE_KEYS.OPTIMIZED,
+      JSON.stringify({
+        ja: OPTIMAL_DEBOUNCE.ja,
+        en: OPTIMAL_DEBOUNCE.en,
+        optimizedAt: Date.now()
+      })
+    );
+
+    // 最適化後に履歴をクリア
+    if (DEBOUNCE_CONFIG.CLEAR_AFTER_OPTIMIZATION) {
+      clearDebounceHistory();
+    }
+
+    return results;
+  }
+
+  function updateDebounceDisplay() {
+    if (!currentJaEl || !currentEnEl) return;
+
+    currentJaEl.textContent = `${OPTIMAL_DEBOUNCE.ja}ms`;
+    currentEnEl.textContent = `${OPTIMAL_DEBOUNCE.en}ms`;
+
+    if (historyJaCountEl) historyJaCountEl.textContent = debounceHistory.ja.length;
+    if (historyEnCountEl) historyEnCountEl.textContent = debounceHistory.en.length;
+
+    // 推奨表示
+    if (jaStatusEl) {
+      const jaNeeded = DEBOUNCE_CONFIG.RECOMMENDED_SAMPLES - debounceHistory.ja.length;
+      jaStatusEl.textContent = debounceHistory.ja.length >= DEBOUNCE_CONFIG.RECOMMENDED_SAMPLES
+        ? '✅ 推奨'
+        : `⏳ あと${jaNeeded}件`;
+    }
+
+    if (enStatusEl) {
+      const enNeeded = DEBOUNCE_CONFIG.RECOMMENDED_SAMPLES - debounceHistory.en.length;
+      enStatusEl.textContent = debounceHistory.en.length >= DEBOUNCE_CONFIG.RECOMMENDED_SAMPLES
+        ? '✅ 推奨'
+        : `⏳ あと${enNeeded}件`;
+    }
+  }
+
   saveApiKeysBtn?.addEventListener('click', () => {
     const k = (openaiKeyInput.value || '').trim();
     if (!k) { alert('OpenAI APIキーを入力してください。'); return; }
@@ -181,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   settingsButton?.addEventListener('click', () => {
     openaiKeyInput.value = OPENAI_API_KEY;
+    updateDebounceDisplay(); // デバウンス表示を更新
     apiModal?.setAttribute('aria-hidden', 'false');
   });
 
@@ -219,6 +407,71 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('translatorFontSize', size);
   }
 
+  // Event listeners - Register only once
+  startJapaneseBtn?.addEventListener('click', () => {
+    if (!OPENAI_API_KEY) {
+      alert('OpenAI APIキーが設定されていません。');
+      apiModal?.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    startRecording('ja');
+  });
+
+  startEnglishBtn?.addEventListener('click', () => {
+    if (!OPENAI_API_KEY) {
+      alert('OpenAI APIキーが設定されていません。');
+      apiModal?.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    startRecording('en');
+  });
+
+  stopBtn?.addEventListener('click', stopRecording);
+  resetBtn?.addEventListener('click', resetContent);
+  fontSizeSmallBtn?.addEventListener('click', () => changeFontSize('small'));
+  fontSizeMediumBtn?.addEventListener('click', () => changeFontSize('medium'));
+  fontSizeLargeBtn?.addEventListener('click', () => changeFontSize('large'));
+  fontSizeXLargeBtn?.addEventListener('click', () => changeFontSize('xlarge'));
+
+  // Debounce optimization button
+  optimizeDebounceBtn?.addEventListener('click', () => {
+    const results = optimizeDebounce();
+
+    // 結果を表示
+    let message = '';
+
+    if (results.ja) {
+      message += `✅ 日本語: ${OPTIMAL_DEBOUNCE.ja}ms に最適化\n`;
+      message += `   (${results.stats.ja.samples}件のデータから算出)\n`;
+    } else {
+      const needed = DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES - debounceHistory.ja.length;
+      message += `⚠️ 日本語: データ不足 (あと${needed}件必要)\n`;
+    }
+
+    if (results.en) {
+      message += `✅ 英語: ${OPTIMAL_DEBOUNCE.en}ms に最適化\n`;
+      message += `   (${results.stats.en.samples}件のデータから算出)\n`;
+    } else {
+      const needed = DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES - debounceHistory.en.length;
+      message += `⚠️ 英語: データ不足 (あと${needed}件必要)\n`;
+    }
+
+    if (DEBOUNCE_CONFIG.CLEAR_AFTER_OPTIMIZATION) {
+      message += '\n📦 履歴データをクリアしました';
+    }
+
+    alert(message);
+
+    // UI更新
+    updateDebounceDisplay();
+
+    // 結果表示エリアにも出力
+    if (optimizationResultEl) {
+      optimizationResultEl.textContent = message;
+      optimizationResultEl.style.display = 'block';
+    }
+  });
+
   function initializeApp() {
     errEl.textContent = '';
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
@@ -226,15 +479,14 @@ document.addEventListener('DOMContentLoaded', () => {
       errEl.textContent = 'Chrome、Safari、またはEdgeをご利用ください。';
       return;
     }
-    setupSpeechRecognition();
-    startJapaneseBtn?.addEventListener('click', () => startRecording('ja'));
-    startEnglishBtn?.addEventListener('click', () => startRecording('en'));
-    stopBtn?.addEventListener('click', stopRecording);
-    resetBtn?.addEventListener('click', resetContent);
-    fontSizeSmallBtn?.addEventListener('click', () => changeFontSize('small'));
-    fontSizeMediumBtn?.addEventListener('click', () => changeFontSize('medium'));
-    fontSizeLargeBtn?.addEventListener('click', () => changeFontSize('large'));
-    fontSizeXLargeBtn?.addEventListener('click', () => changeFontSize('xlarge'));
+
+    // Setup speech recognition only once
+    if (!recognition) {
+      setupSpeechRecognition();
+    }
+
+    // Load debounce data
+    loadDebounceData();
 
     changeFontSize(localStorage.getItem('translatorFontSize') || 'medium');
 
@@ -321,11 +573,22 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             hasNewContent = true;
             finalText += (selectedLanguage === 'ja') ? (japaneseFormatter.format(transcript) + ' ') : (transcript + ' ');
+
+            // デバウンス履歴を記録（interim開始からfinalまでの時間）
+            if (interimStartTime) {
+              const duration = Date.now() - interimStartTime;
+              recordDebounceHistory(selectedLanguage, duration);
+              interimStartTime = null;
+            }
           } else {
             finalText += transcript + ' ';
           }
         } else {
           interimText += transcript + ' '; hasNewContent = true;
+          // interim結果の開始時刻を記録
+          if (!interimStartTime) {
+            interimStartTime = Date.now();
+          }
         }
       }
 
@@ -363,10 +626,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function startRecording(lang) {
+    // Prevent starting if already recording
+    if (isRecording) {
+      console.warn('Already recording, ignoring start request');
+      return;
+    }
+
     errEl.textContent = '';
     selectedLanguage = lang;
     processedResultIds.clear();
     lastSubmittedFast = '';
+    interimStartTime = null; // リセット
     originalTextEl.textContent = '';
     translatedTextEl.textContent = '';
 
@@ -384,7 +654,9 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (e) {
       console.error('音声認識開始エラー', e);
       errEl.textContent = '音声認識の開始に失敗しました: ' + (e?.message || e);
-      stopRecording();
+      isRecording = false;
+      showInitialScreen();
+      setStatus('エラー', ['error']);
     }
   }
 
