@@ -199,8 +199,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (optimized) {
       try {
         const data = JSON.parse(optimized);
-        OPTIMAL_DEBOUNCE.ja = data.ja || 346;
-        OPTIMAL_DEBOUNCE.en = data.en || 154;
+
+        // 型チェックと範囲検証（日本語）
+        if (typeof data.ja === 'number' && data.ja >= 200 && data.ja <= 600) {
+          OPTIMAL_DEBOUNCE.ja = data.ja;
+        } else {
+          console.warn('日本語デバウンス値が無効:', data.ja);
+        }
+
+        // 型チェックと範囲検証（英語）
+        if (typeof data.en === 'number' && data.en >= 100 && data.en <= 400) {
+          OPTIMAL_DEBOUNCE.en = data.en;
+        } else {
+          console.warn('英語デバウンス値が無効:', data.en);
+        }
       } catch (e) {
         console.warn('最適化データの読み込みに失敗', e);
       }
@@ -210,7 +222,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const history = localStorage.getItem(STORAGE_KEYS.HISTORY);
     if (history) {
       try {
-        debounceHistory = JSON.parse(history);
+        const parsed = JSON.parse(history);
+
+        // 構造検証
+        if (parsed && typeof parsed === 'object') {
+          // 日本語履歴の検証
+          if (Array.isArray(parsed.ja)) {
+            debounceHistory.ja = parsed.ja.filter(item =>
+              item && typeof item.f === 'number' && typeof item.t === 'number'
+            );
+          }
+
+          // 英語履歴の検証
+          if (Array.isArray(parsed.en)) {
+            debounceHistory.en = parsed.en.filter(item =>
+              item && typeof item.f === 'number' && typeof item.t === 'number'
+            );
+          }
+        }
       } catch (e) {
         console.warn('履歴データの読み込みに失敗', e);
         debounceHistory = { ja: [], en: [] };
@@ -319,12 +348,214 @@ document.addEventListener('DOMContentLoaded', () => {
       })
     );
 
-    // 最適化後に履歴をクリア
+    // 成功した言語のみ履歴をクリア（条件付き削除）
     if (DEBOUNCE_CONFIG.CLEAR_AFTER_OPTIMIZATION) {
-      clearDebounceHistory();
+      let cleared = false;
+
+      if (results.ja) {
+        debounceHistory.ja = [];
+        cleared = true;
+      }
+
+      if (results.en) {
+        debounceHistory.en = [];
+        cleared = true;
+      }
+
+      if (cleared) {
+        saveDebounceHistory();
+        console.log('✅ 最適化成功した言語の履歴をクリアしました');
+      }
     }
 
     return results;
+  }
+
+  // プレビュー機能（実行せずに結果を予測）
+  function previewOptimization() {
+    const preview = {
+      ja: {
+        canOptimize: false,
+        currentValue: OPTIMAL_DEBOUNCE.ja,
+        optimizedValue: null,
+        samples: debounceHistory.ja.length,
+        required: DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES,
+        recommended: DEBOUNCE_CONFIG.RECOMMENDED_SAMPLES,
+        willDelete: 0
+      },
+      en: {
+        canOptimize: false,
+        currentValue: OPTIMAL_DEBOUNCE.en,
+        optimizedValue: null,
+        samples: debounceHistory.en.length,
+        required: DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES,
+        recommended: DEBOUNCE_CONFIG.RECOMMENDED_SAMPLES,
+        willDelete: 0
+      }
+    };
+
+    // 日本語のプレビュー
+    if (debounceHistory.ja.length >= DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES) {
+      preview.ja.canOptimize = true;
+      preview.ja.optimizedValue = calculateOptimalValue(debounceHistory.ja, 'ja');
+      preview.ja.willDelete = debounceHistory.ja.length;
+    }
+
+    // 英語のプレビュー
+    if (debounceHistory.en.length >= DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES) {
+      preview.en.canOptimize = true;
+      preview.en.optimizedValue = calculateOptimalValue(debounceHistory.en, 'en');
+      preview.en.willDelete = debounceHistory.en.length;
+    }
+
+    return preview;
+  }
+
+  function displayOptimizationPreview(preview) {
+    if (!optimizationResultEl) return;
+
+    let html = '<div class="preview-results">';
+    html += '<h5 class="preview-title">📊 最適化プレビュー</h5>';
+
+    // 日本語のプレビュー
+    html += '<div class="preview-section">';
+    if (preview.ja.canOptimize) {
+      const change = preview.ja.optimizedValue - preview.ja.currentValue;
+      const changeText = change > 0 ? `+${change}ms` : `${change}ms`;
+      const changeClass = change > 0 ? 'change-slower' : 'change-faster';
+
+      html += `
+        <div class="preview-item preview-success">
+          <div class="preview-lang">✅ 日本語</div>
+          <div class="preview-values">
+            <span class="current-value">${preview.ja.currentValue}ms</span>
+            <span class="arrow">→</span>
+            <span class="optimized-value">${preview.ja.optimizedValue}ms</span>
+            <span class="change ${changeClass}">(${changeText})</span>
+          </div>
+          <div class="preview-info">
+            📈 ${preview.ja.samples}件のデータから算出
+            ${preview.ja.samples >= preview.ja.recommended ? '✅ 推奨レベル' : '⚠️ 最低限'}
+          </div>
+          <div class="preview-delete">
+            🗑️ 削除される履歴: ${preview.ja.willDelete}件
+          </div>
+        </div>
+      `;
+    } else {
+      const needed = preview.ja.required - preview.ja.samples;
+      html += `
+        <div class="preview-item preview-warning">
+          <div class="preview-lang">⚠️ 日本語</div>
+          <div class="preview-values">
+            <span class="current-value">${preview.ja.currentValue}ms</span>
+            <span class="arrow">→</span>
+            <span class="keep-value">${preview.ja.currentValue}ms</span>
+            <span class="no-change">(変更なし)</span>
+          </div>
+          <div class="preview-info">
+            ⏳ データ不足: あと${needed}件必要（現在${preview.ja.samples}件）
+          </div>
+          <div class="preview-keep">
+            💾 保持される履歴: ${preview.ja.samples}件
+          </div>
+        </div>
+      `;
+    }
+    html += '</div>';
+
+    // 英語のプレビュー
+    html += '<div class="preview-section">';
+    if (preview.en.canOptimize) {
+      const change = preview.en.optimizedValue - preview.en.currentValue;
+      const changeText = change > 0 ? `+${change}ms` : `${change}ms`;
+      const changeClass = change > 0 ? 'change-slower' : 'change-faster';
+
+      html += `
+        <div class="preview-item preview-success">
+          <div class="preview-lang">✅ 英語</div>
+          <div class="preview-values">
+            <span class="current-value">${preview.en.currentValue}ms</span>
+            <span class="arrow">→</span>
+            <span class="optimized-value">${preview.en.optimizedValue}ms</span>
+            <span class="change ${changeClass}">(${changeText})</span>
+          </div>
+          <div class="preview-info">
+            📈 ${preview.en.samples}件のデータから算出
+            ${preview.en.samples >= preview.en.recommended ? '✅ 推奨レベル' : '⚠️ 最低限'}
+          </div>
+          <div class="preview-delete">
+            🗑️ 削除される履歴: ${preview.en.willDelete}件
+          </div>
+        </div>
+      `;
+    } else {
+      const needed = preview.en.required - preview.en.samples;
+      html += `
+        <div class="preview-item preview-warning">
+          <div class="preview-lang">⚠️ 英語</div>
+          <div class="preview-values">
+            <span class="current-value">${preview.en.currentValue}ms</span>
+            <span class="arrow">→</span>
+            <span class="keep-value">${preview.en.currentValue}ms</span>
+            <span class="no-change">(変更なし)</span>
+          </div>
+          <div class="preview-info">
+            ⏳ データ不足: あと${needed}件必要（現在${preview.en.samples}件）
+          </div>
+          <div class="preview-keep">
+            💾 保持される履歴: ${preview.en.samples}件
+          </div>
+        </div>
+      `;
+    }
+    html += '</div>';
+
+    // 実行ボタン
+    if (preview.ja.canOptimize || preview.en.canOptimize) {
+      html += '<button id="executeOptimizationBtn" class="btn-execute">最適化を実行</button>';
+    } else {
+      html += '<div class="preview-note">⚠️ 両言語ともデータ不足のため、最適化できません</div>';
+    }
+
+    html += '</div>';
+
+    optimizationResultEl.innerHTML = html;
+    optimizationResultEl.style.display = 'block';
+
+    // 実行ボタンのイベントリスナー
+    const executeBtn = document.getElementById('executeOptimizationBtn');
+    if (executeBtn) {
+      executeBtn.addEventListener('click', () => {
+        const results = optimizeDebounce();
+        showOptimizationComplete(results);
+        updateDebounceDisplay();
+      });
+    }
+  }
+
+  function showOptimizationComplete(results) {
+    let message = '✅ 最適化が完了しました\n\n';
+
+    if (results.ja) {
+      message += `日本語: ${OPTIMAL_DEBOUNCE.ja}ms に最適化\n`;
+      message += `(${results.stats.ja.samples}件のデータから算出)\n\n`;
+    }
+
+    if (results.en) {
+      message += `英語: ${OPTIMAL_DEBOUNCE.en}ms に最適化\n`;
+      message += `(${results.stats.en.samples}件のデータから算出)\n\n`;
+    }
+
+    message += '📦 履歴データをクリアしました\n';
+    message += '新しい設定が適用されました';
+
+    alert(message);
+
+    // プレビュー表示をクリア
+    if (optimizationResultEl) {
+      optimizationResultEl.innerHTML = '<div class="optimization-complete">✅ 最適化完了！新しい設定が適用されました。</div>';
+    }
   }
 
   function updateDebounceDisplay() {
@@ -433,43 +664,10 @@ document.addEventListener('DOMContentLoaded', () => {
   fontSizeLargeBtn?.addEventListener('click', () => changeFontSize('large'));
   fontSizeXLargeBtn?.addEventListener('click', () => changeFontSize('xlarge'));
 
-  // Debounce optimization button
+  // Debounce optimization preview button
   optimizeDebounceBtn?.addEventListener('click', () => {
-    const results = optimizeDebounce();
-
-    // 結果を表示
-    let message = '';
-
-    if (results.ja) {
-      message += `✅ 日本語: ${OPTIMAL_DEBOUNCE.ja}ms に最適化\n`;
-      message += `   (${results.stats.ja.samples}件のデータから算出)\n`;
-    } else {
-      const needed = DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES - debounceHistory.ja.length;
-      message += `⚠️ 日本語: データ不足 (あと${needed}件必要)\n`;
-    }
-
-    if (results.en) {
-      message += `✅ 英語: ${OPTIMAL_DEBOUNCE.en}ms に最適化\n`;
-      message += `   (${results.stats.en.samples}件のデータから算出)\n`;
-    } else {
-      const needed = DEBOUNCE_CONFIG.MIN_REQUIRED_SAMPLES - debounceHistory.en.length;
-      message += `⚠️ 英語: データ不足 (あと${needed}件必要)\n`;
-    }
-
-    if (DEBOUNCE_CONFIG.CLEAR_AFTER_OPTIMIZATION) {
-      message += '\n📦 履歴データをクリアしました';
-    }
-
-    alert(message);
-
-    // UI更新
-    updateDebounceDisplay();
-
-    // 結果表示エリアにも出力
-    if (optimizationResultEl) {
-      optimizationResultEl.textContent = message;
-      optimizationResultEl.style.display = 'block';
-    }
+    const preview = previewOptimization();
+    displayOptimizationPreview(preview);
   });
 
   function initializeApp() {

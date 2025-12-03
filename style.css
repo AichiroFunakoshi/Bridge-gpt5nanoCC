@@ -510,6 +510,166 @@ body {
   white-space: pre-line;
 }
 
+/* プレビュー表示 */
+.preview-results {
+  margin-top: 16px;
+  padding: 16px;
+  background: #ffffff;
+  border: 2px solid #007aff;
+  border-radius: 10px;
+}
+
+.preview-title {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #007aff;
+  text-align: center;
+}
+
+.preview-section {
+  margin-bottom: 12px;
+}
+
+.preview-item {
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.preview-success {
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+}
+
+.preview-warning {
+  background: #fff3e0;
+  border: 1px solid #ff9800;
+}
+
+.preview-lang {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: #1c1c1e;
+}
+
+.preview-values {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 15px;
+  flex-wrap: wrap;
+}
+
+.current-value {
+  font-weight: 600;
+  color: #8e8e93;
+}
+
+.arrow {
+  color: #007aff;
+  font-weight: 700;
+}
+
+.optimized-value {
+  font-weight: 700;
+  color: #007aff;
+}
+
+.keep-value {
+  font-weight: 600;
+  color: #8e8e93;
+}
+
+.change {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.change-faster {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.change-slower {
+  background: #fff3e0;
+  color: #ff9800;
+}
+
+.no-change {
+  font-size: 13px;
+  color: #8e8e93;
+}
+
+.preview-info {
+  font-size: 13px;
+  color: #1c1c1e;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.preview-delete {
+  font-size: 13px;
+  color: #d32f2f;
+  font-weight: 600;
+}
+
+.preview-keep {
+  font-size: 13px;
+  color: #4caf50;
+  font-weight: 600;
+}
+
+.preview-note {
+  text-align: center;
+  padding: 12px;
+  font-size: 14px;
+  color: #ff9800;
+  font-weight: 600;
+  background: #fff3e0;
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.btn-execute {
+  width: 100%;
+  min-height: 48px;
+  margin-top: 12px;
+  background: #4caf50;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-execute:hover {
+  background: #388e3c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+}
+
+.btn-execute:active {
+  transform: scale(0.98);
+}
+
+.optimization-complete {
+  padding: 16px;
+  background: #e8f5e9;
+  border: 2px solid #4caf50;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
 /* ========== アクセシビリティ ========== */
 .sr-only {
   position: absolute;
