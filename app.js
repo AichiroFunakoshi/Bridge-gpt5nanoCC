@@ -199,8 +199,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (optimized) {
       try {
         const data = JSON.parse(optimized);
-        OPTIMAL_DEBOUNCE.ja = data.ja || 346;
-        OPTIMAL_DEBOUNCE.en = data.en || 154;
+
+        // 型チェックと範囲検証（日本語）
+        if (typeof data.ja === 'number' && data.ja >= 200 && data.ja <= 600) {
+          OPTIMAL_DEBOUNCE.ja = data.ja;
+        } else {
+          console.warn('日本語デバウンス値が無効:', data.ja);
+        }
+
+        // 型チェックと範囲検証（英語）
+        if (typeof data.en === 'number' && data.en >= 100 && data.en <= 400) {
+          OPTIMAL_DEBOUNCE.en = data.en;
+        } else {
+          console.warn('英語デバウンス値が無効:', data.en);
+        }
       } catch (e) {
         console.warn('最適化データの読み込みに失敗', e);
       }
@@ -210,7 +222,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const history = localStorage.getItem(STORAGE_KEYS.HISTORY);
     if (history) {
       try {
-        debounceHistory = JSON.parse(history);
+        const parsed = JSON.parse(history);
+
+        // 構造検証
+        if (parsed && typeof parsed === 'object') {
+          // 日本語履歴の検証
+          if (Array.isArray(parsed.ja)) {
+            debounceHistory.ja = parsed.ja.filter(item =>
+              item && typeof item.f === 'number' && typeof item.t === 'number'
+            );
+          }
+
+          // 英語履歴の検証
+          if (Array.isArray(parsed.en)) {
+            debounceHistory.en = parsed.en.filter(item =>
+              item && typeof item.f === 'number' && typeof item.t === 'number'
+            );
+          }
+        }
       } catch (e) {
         console.warn('履歴データの読み込みに失敗', e);
         debounceHistory = { ja: [], en: [] };
@@ -319,9 +348,24 @@ document.addEventListener('DOMContentLoaded', () => {
       })
     );
 
-    // 最適化後に履歴をクリア
+    // 成功した言語のみ履歴をクリア（条件付き削除）
     if (DEBOUNCE_CONFIG.CLEAR_AFTER_OPTIMIZATION) {
-      clearDebounceHistory();
+      let cleared = false;
+
+      if (results.ja) {
+        debounceHistory.ja = [];
+        cleared = true;
+      }
+
+      if (results.en) {
+        debounceHistory.en = [];
+        cleared = true;
+      }
+
+      if (cleared) {
+        saveDebounceHistory();
+        console.log('✅ 最適化成功した言語の履歴をクリアしました');
+      }
     }
 
     return results;
