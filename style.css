@@ -408,6 +408,108 @@ body {
   transform: scale(0.98);
 }
 
+.btn-secondary {
+  width: 100%;
+  min-height: 44px;
+  background: #f0f0f5;
+  color: #007aff;
+  border: 2px solid #007aff;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background: #e0e0ea;
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* デバウンス最適化セクション */
+.debounce-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f9f9fb;
+  border-radius: 12px;
+  border: 1px solid #e5e5ea;
+}
+
+.section-title {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1c1c1e;
+}
+
+.section-desc {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: #8e8e93;
+  line-height: 1.5;
+}
+
+.debounce-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e5e5ea;
+}
+
+.info-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.info-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #8e8e93;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 15px;
+  color: #1c1c1e;
+  line-height: 1.6;
+}
+
+.info-value strong {
+  font-weight: 700;
+  color: #007aff;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  background: #f0f0f5;
+  color: #8e8e93;
+}
+
+.optimization-result {
+  margin-top: 12px;
+  padding: 12px;
+  background: #e8f5e9;
+  border: 1px solid #4caf50;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #2e7d32;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
 /* ========== アクセシビリティ ========== */
 .sr-only {
   position: absolute;
