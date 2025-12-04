@@ -183,6 +183,7 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0; /* flexboxのオーバーフロー問題を解決 */
 }
 
 .translation-column:first-child {
@@ -336,7 +337,10 @@ body {
   padding: 32px;
   max-width: 480px;
   width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  -webkit-overflow-scrolling: touch; /* iOS用スムーズスクロール */
 }
 
 .modal-title {
@@ -708,7 +712,7 @@ body {
 
   .translation-column {
     flex: 1;
-    max-height: 50%;
+    min-height: 0; /* flexboxのオーバーフロー問題を解決 */
   }
 }
 
