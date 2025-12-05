@@ -434,6 +434,49 @@ body {
   transform: scale(0.98);
 }
 
+/* ヘルプ・ガイドセクション */
+.help-section {
+  margin-top: 24px;
+  padding: 20px;
+  background: #f9f9fb;
+  border-radius: 12px;
+  border: 1px solid #e5e5ea;
+}
+
+.btn-guide {
+  width: 100%;
+  min-height: 48px;
+  background: #ffffff;
+  border: 2px solid #007aff;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #007aff;
+}
+
+.btn-guide:hover {
+  background: #007aff;
+  color: #ffffff;
+}
+
+.btn-guide:active {
+  transform: scale(0.98);
+}
+
+.guide-icon {
+  font-size: 20px;
+}
+
+.guide-text {
+  font-size: 16px;
+}
+
 /* デバウンス最適化セクション */
 .debounce-section {
   margin-top: 24px;
@@ -741,5 +784,337 @@ body {
   .translation-content {
     padding: 16px;
     font-size: 16px;
+  }
+}
+
+/* ========== オンボーディング ========== */
+.onboarding-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(245, 245, 247, 0.98); /* 薄いグレー背景 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  padding: 20px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.onboarding-modal[aria-hidden="false"] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.onboarding-content {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 40px 32px 32px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+
+/* 進捗ドット */
+.onboarding-progress {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 32px;
+}
+
+.progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d1d1d6;
+  transition: all 0.3s ease;
+}
+
+.progress-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: #007aff;
+}
+
+/* 画面遷移 */
+.onboarding-screen {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.onboarding-screen[data-screen].active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.onboarding-screen:not([style*="display: none"]) {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* アイコン */
+.onboarding-icon {
+  font-size: 64px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* タイトル */
+.onboarding-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1d1d1f;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.onboarding-subtitle {
+  font-size: 16px;
+  color: #86868b;
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+/* ステップ表示 */
+.onboarding-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.onboarding-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  background: #f5f5f7;
+  border-radius: 12px;
+}
+
+.step-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 4px;
+}
+
+.step-desc {
+  font-size: 14px;
+  color: #86868b;
+  line-height: 1.5;
+}
+
+/* Tip */
+.onboarding-tip {
+  text-align: center;
+  font-size: 14px;
+  color: #007aff;
+  background: #e8f4ff;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+/* ガイド */
+.onboarding-guide {
+  background: #f5f5f7;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.guide-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 12px;
+}
+
+.guide-steps {
+  margin: 0 0 12px 20px;
+  padding: 0;
+  color: #1d1d1f;
+}
+
+.guide-steps li {
+  font-size: 14px;
+  line-height: 1.8;
+  color: #1d1d1f;
+}
+
+.guide-links {
+  margin-top: 12px;
+}
+
+.guide-link {
+  display: inline-block;
+  font-size: 14px;
+  color: #007aff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.guide-link:hover {
+  text-decoration: underline;
+}
+
+/* 入力グループ */
+.onboarding-input-group {
+  margin-bottom: 16px;
+}
+
+.onboarding-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 8px;
+}
+
+.onboarding-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  border: 1px solid #d1d1d6;
+  border-radius: 10px;
+  transition: border-color 0.2s ease;
+}
+
+.onboarding-input:focus {
+  outline: none;
+  border-color: #007aff;
+}
+
+/* チェックボックス */
+.onboarding-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #86868b;
+  cursor: pointer;
+  margin-bottom: 24px;
+}
+
+.onboarding-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+/* アクション */
+.onboarding-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.onboarding-nav {
+  display: flex;
+  gap: 12px;
+}
+
+.onboarding-btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.onboarding-btn-primary {
+  background: #007aff;
+  color: #ffffff;
+}
+
+.onboarding-btn-primary:hover {
+  background: #0051d5;
+}
+
+.onboarding-btn-secondary {
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+.onboarding-btn-secondary:hover {
+  background: #e5e5ea;
+}
+
+.onboarding-btn-text {
+  background: transparent;
+  color: #86868b;
+  padding: 12px 16px;
+}
+
+.onboarding-btn-text:hover {
+  color: #1d1d1f;
+}
+
+.onboarding-btn:active {
+  transform: scale(0.98);
+}
+
+/* モバイル最適化 */
+@media (max-width: 480px) {
+  .onboarding-content {
+    padding: 32px 24px 24px;
+  }
+
+  .onboarding-icon {
+    font-size: 48px;
+  }
+
+  .onboarding-title {
+    font-size: 24px;
+  }
+
+  .onboarding-subtitle {
+    font-size: 14px;
+  }
+
+  .step-icon {
+    font-size: 28px;
+  }
+
+  .step-title {
+    font-size: 16px;
+  }
+
+  .step-desc {
+    font-size: 13px;
+  }
+
+  .onboarding-actions {
+    flex-direction: column;
+  }
+
+  .onboarding-nav {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .onboarding-btn {
+    width: 100%;
   }
 }
