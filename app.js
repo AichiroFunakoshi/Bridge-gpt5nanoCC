@@ -1041,6 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let onboardingApiKeyInput, onboardingDontShowCheckbox;
   let currentOnboardingScreen = 0;
   let totalOnboardingScreens = 0; // DOM読み込み後に動的に設定
+  let previousFocusElement = null; // フォーカス管理用（アクセシビリティ）
 
   // オンボーディングDOM要素の取得
   function initOnboardingDOM() {
@@ -1105,8 +1106,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // ただし、APIキーが既に設定されている場合はスキップ
       const existingApiKey = localStorage.getItem('translatorOpenaiKey');
       if (existingApiKey?.trim().length > 0) {
-        // APIキーあり → オンボーディング完了扱い
-        saveOnboardingData({ completed: true });
+        // APIキーあり → オンボーディング完了扱い（次回の不要な書き込みを防ぐ）
+        saveOnboardingData({ completed: true, dontShowAgain: true });
         loadApiKeys(); // 通常のフローへ
         return;
       }
@@ -1123,15 +1124,34 @@ document.addEventListener('DOMContentLoaded', () => {
   function showOnboarding() {
     if (!onboardingModal) return;
 
+    // 現在のフォーカス要素を保存（アクセシビリティ）
+    previousFocusElement = document.activeElement;
+
     currentOnboardingScreen = 0;
     updateOnboardingScreen();
     onboardingModal.setAttribute('aria-hidden', 'false');
+
+    // モーダル内の最初のインタラクティブ要素にフォーカス（WCAG準拠）
+    setTimeout(() => {
+      const firstFocusable = onboardingModal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      if (firstFocusable) {
+        firstFocusable.focus();
+      }
+    }, 100);
   }
 
   // オンボーディング非表示
   function hideOnboarding() {
     if (!onboardingModal) return;
     onboardingModal.setAttribute('aria-hidden', 'true');
+
+    // 元のフォーカス位置に戻す（アクセシビリティ）
+    if (previousFocusElement && typeof previousFocusElement.focus === 'function') {
+      setTimeout(() => {
+        previousFocusElement.focus();
+        previousFocusElement = null;
+      }, 100);
+    }
   }
 
   // オンボーディング画面更新
