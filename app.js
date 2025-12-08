@@ -1024,8 +1024,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // このセクションは初回ユーザー向けのガイダンスを管理します。
   // 新機能追加時やUI変更時には、以下を更新してください：
   // - APP_VERSION: アプリバージョン番号
-  // - ONBOARDING_VERSION: ガイダンス内容のバージョン
+  // - ONBOARDING_VERSION: ガイダンス内容のバージョン（変更すると自動リセット）
   // - index.htmlの#onboardingModal内のHTML（スクリーン内容）
+  //
+  // 【バージョン互換性管理】
+  // ONBOARDING_VERSIONを変更すると、既存ユーザーのオンボーディング完了フラグが
+  // 自動的にリセットされ、次回起動時に新しいガイダンスが表示されます。
   // ============================================================================
 
   const APP_VERSION = '5.1';
@@ -1085,6 +1089,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initOnboardingEventListeners();
 
     const data = loadOnboardingData();
+
+    // オンボーディングバージョン互換性管理
+    // 保存済みバージョンと現在のバージョンが異なる場合、リセット
+    if (data.version !== ONBOARDING_VERSION) {
+      console.log(`オンボーディングバージョンが更新されました: ${data.version} → ${ONBOARDING_VERSION}`);
+      data.completed = false;
+      data.dontShowAgain = false;
+      data.version = ONBOARDING_VERSION;
+      saveOnboardingData(data);
+    }
 
     // 初回起動 または 「次回から表示しない」がfalseの場合
     if (!data.completed || !data.dontShowAgain) {
