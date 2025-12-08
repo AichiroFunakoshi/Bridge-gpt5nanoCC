@@ -1070,6 +1070,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // オンボーディングを表示するか判定
   function checkAndShowOnboarding() {
+    // バージョンデータを先にロード（全パスで実行されるように）
+    const versionData = loadVersionData();
+    checkVersionUpdate(versionData);
+
     // DOM要素の初期化
     if (!initOnboardingDOM()) {
       // オンボーディングが無効な場合、通常のフローへ
@@ -1081,7 +1085,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initOnboardingEventListeners();
 
     const data = loadOnboardingData();
-    const versionData = loadVersionData();
 
     // 初回起動 または 「次回から表示しない」がfalseの場合
     if (!data.completed || !data.dontShowAgain) {
@@ -1100,9 +1103,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // オンボーディング不要 → 通常のフローへ
       loadApiKeys();
     }
-
-    // バージョンアップ時の新機能通知（将来の拡張用）
-    checkVersionUpdate(versionData);
   }
 
   // オンボーディング表示
@@ -1197,7 +1197,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 完了処理
   function handleOnboardingComplete() {
-    // APIキーの保存
+    // APIキーの保存（新規入力がある場合）
     const apiKey = onboardingApiKeyInput ? onboardingApiKeyInput.value.trim() : '';
 
     if (apiKey) {
@@ -1222,11 +1222,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // モーダルを閉じる
     hideOnboarding();
 
-    // APIキーが設定された場合、アプリを初期化
-    if (apiKey) {
+    // 既存キーを確認（新規入力がなくても既存キーがあればアプリを起動）
+    const existingKey = localStorage.getItem('translatorOpenaiKey');
+    if (existingKey?.trim()) {
+      OPENAI_API_KEY = existingKey.trim();
       initializeApp();
     } else {
-      // APIキーが未設定の場合、設定モーダルを表示
+      // 本当にキーがない場合のみ設定モーダル表示
       setTimeout(() => {
         if (apiModal) {
           apiModal.setAttribute('aria-hidden', 'false');
