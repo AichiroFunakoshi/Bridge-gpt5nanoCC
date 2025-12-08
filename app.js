@@ -82,7 +82,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const STORAGE_KEYS = {
     HISTORY: 'debounceHistory_v1',
-    OPTIMIZED: 'optimizedDebounce_v1'
+    OPTIMIZED: 'optimizedDebounce_v1',
+    ONBOARDING: 'onboarding_v1',
+    APP_VERSION: 'app_version'
   };
 
   let OPTIMAL_DEBOUNCE = { ja: 346, en: 154 }; // デフォルト値
@@ -1015,6 +1017,343 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // ============================================================================
+  // ONBOARDING SYSTEM (オンボーディングシステム)
+  // ============================================================================
+  // 【更新時の注意】
+  // このセクションは初回ユーザー向けのガイダンスを管理します。
+  // 新機能追加時やUI変更時には、以下を更新してください：
+  // - APP_VERSION: アプリバージョン番号
+  // - ONBOARDING_VERSION: ガイダンス内容のバージョン
+  // - index.htmlの#onboardingModal内のHTML（スクリーン内容）
+  // ============================================================================
+
+  const APP_VERSION = '5.1';
+  const ONBOARDING_VERSION = '1.0';
+
+  // DOM要素（オンボーディング）
+  let onboardingModal, onboardingScreens, onboardingProgressDots;
+  let onboardingBtnNext, onboardingBtnBack, onboardingBtnSkip;
+  let onboardingApiKeyInput, onboardingDontShowCheckbox;
+  let currentOnboardingScreen = 0;
+  const totalOnboardingScreens = 2; // 画面数
+
+  // オンボーディングDOM要素の取得
+  function initOnboardingDOM() {
+    onboardingModal = document.getElementById('onboardingModal');
+    onboardingScreens = document.querySelectorAll('.onboarding-screen');
+    onboardingProgressDots = document.querySelectorAll('.progress-dot');
+    onboardingBtnNext = document.getElementById('onboardingNext');
+    onboardingBtnBack = document.getElementById('onboardingBack');
+    onboardingBtnSkip = document.getElementById('onboardingSkip');
+    onboardingApiKeyInput = document.getElementById('onboardingApiKey');
+    onboardingDontShowCheckbox = document.getElementById('dontShowOnboarding');
+
+    // 必須要素の存在確認
+    if (!onboardingModal || onboardingScreens.length === 0 || onboardingProgressDots.length === 0) {
+      console.warn('オンボーディング要素が見つかりません。オンボーディング機能は無効化されます。');
+      return false;
+    }
+
+    return true;
+  }
+
+  // オンボーディングイベントリスナーの設定
+  function initOnboardingEventListeners() {
+    if (onboardingBtnNext) onboardingBtnNext.addEventListener('click', handleOnboardingNext);
+    if (onboardingBtnBack) onboardingBtnBack.addEventListener('click', handleOnboardingBack);
+    if (onboardingBtnSkip) onboardingBtnSkip.addEventListener('click', handleOnboardingSkip);
+  }
+
+  // オンボーディングを表示するか判定
+  function checkAndShowOnboarding() {
+    // DOM要素の初期化
+    if (!initOnboardingDOM()) {
+      // オンボーディングが無効な場合、通常のフローへ
+      loadApiKeys();
+      return;
+    }
+
+    // イベントリスナーを設定
+    initOnboardingEventListeners();
+
+    const data = loadOnboardingData();
+    const versionData = loadVersionData();
+
+    // 初回起動 または 「次回から表示しない」がfalseの場合
+    if (!data.completed || !data.dontShowAgain) {
+      // ただし、APIキーが既に設定されている場合はスキップ
+      const existingApiKey = localStorage.getItem('translatorOpenaiKey');
+      if (existingApiKey?.trim().length > 0) {
+        // APIキーあり → オンボーディング完了扱い
+        saveOnboardingData({ completed: true });
+        loadApiKeys(); // 通常のフローへ
+        return;
+      }
+
+      // APIキーなし → オンボーディング表示
+      showOnboarding();
+    } else {
+      // オンボーディング不要 → 通常のフローへ
+      loadApiKeys();
+    }
+
+    // バージョンアップ時の新機能通知（将来の拡張用）
+    checkVersionUpdate(versionData);
+  }
+
+  // オンボーディング表示
+  function showOnboarding() {
+    if (!onboardingModal) return;
+
+    currentOnboardingScreen = 0;
+    updateOnboardingScreen();
+    onboardingModal.setAttribute('aria-hidden', 'false');
+  }
+
+  // オンボーディング非表示
+  function hideOnboarding() {
+    if (!onboardingModal) return;
+    onboardingModal.setAttribute('aria-hidden', 'true');
+  }
+
+  // オンボーディング画面更新
+  function updateOnboardingScreen() {
+    // 画面の表示/非表示
+    onboardingScreens.forEach((screen, index) => {
+      if (index === currentOnboardingScreen) {
+        screen.classList.add('active');
+        screen.style.display = 'block';
+      } else {
+        screen.classList.remove('active');
+        screen.style.display = 'none';
+      }
+    });
+
+    // 進捗ドットの更新
+    onboardingProgressDots.forEach((dot, index) => {
+      if (index === currentOnboardingScreen) {
+        dot.classList.add('active');
+      } else {
+        dot.classList.remove('active');
+      }
+    });
+
+    // ボタンの表示/非表示とテキスト更新
+    updateOnboardingButtons();
+  }
+
+  // オンボーディングボタンの表示/非表示とテキスト更新
+  function updateOnboardingButtons() {
+    // 戻るボタン
+    if (onboardingBtnBack) {
+      onboardingBtnBack.style.display = currentOnboardingScreen > 0 ? 'block' : 'none';
+    }
+
+    // 次へボタン
+    if (onboardingBtnNext) {
+      if (currentOnboardingScreen === totalOnboardingScreens - 1) {
+        // 最後の画面: 「保存して開始」
+        onboardingBtnNext.textContent = '保存して開始';
+      } else {
+        // それ以外: 「次へ →」
+        onboardingBtnNext.textContent = '次へ →';
+      }
+    }
+  }
+
+  // 次へボタン処理
+  function handleOnboardingNext() {
+    if (currentOnboardingScreen === totalOnboardingScreens - 1) {
+      // 最後の画面: 保存して完了
+      handleOnboardingComplete();
+    } else {
+      // 次の画面へ
+      currentOnboardingScreen++;
+      updateOnboardingScreen();
+    }
+  }
+
+  // 戻るボタン処理
+  function handleOnboardingBack() {
+    if (currentOnboardingScreen > 0) {
+      currentOnboardingScreen--;
+      updateOnboardingScreen();
+    }
+  }
+
+  // スキップボタン処理
+  function handleOnboardingSkip() {
+    // スキップ回数をカウント（将来の分析用）
+    const data = loadOnboardingData();
+    data.skipCount = (data.skipCount || 0) + 1;
+    saveOnboardingData(data);
+
+    hideOnboarding();
+    // オンボーディングをスキップした場合も通常のフローへ
+    loadApiKeys();
+  }
+
+  // 完了処理
+  function handleOnboardingComplete() {
+    // APIキーの保存
+    const apiKey = onboardingApiKeyInput ? onboardingApiKeyInput.value.trim() : '';
+
+    if (apiKey) {
+      // APIキー形式検証（sk-proj- などの新形式にも対応）
+      if (!apiKey.startsWith('sk-')) {
+        alert('無効なOpenAI APIキー形式です。\nAPIキーは「sk-」で始まる必要があります。');
+        return;
+      }
+
+      // 保存
+      localStorage.setItem('translatorOpenaiKey', apiKey);
+      OPENAI_API_KEY = apiKey; // グローバル変数を更新
+    }
+
+    // オンボーディングデータの保存
+    const dontShow = onboardingDontShowCheckbox ? onboardingDontShowCheckbox.checked : false;
+    saveOnboardingData({
+      completed: true,
+      dontShowAgain: dontShow
+    });
+
+    // モーダルを閉じる
+    hideOnboarding();
+
+    // APIキーが設定された場合、アプリを初期化
+    if (apiKey) {
+      initializeApp();
+    } else {
+      // APIキーが未設定の場合、設定モーダルを表示
+      setTimeout(() => {
+        if (apiModal) {
+          apiModal.setAttribute('aria-hidden', 'false');
+        }
+      }, 300);
+    }
+  }
+
+  // オンボーディングデータの読み込み
+  function loadOnboardingData() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.ONBOARDING);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.warn('オンボーディングデータの読み込みに失敗', e);
+    }
+
+    return {
+      completed: false,
+      version: ONBOARDING_VERSION,
+      lastShown: null,
+      dontShowAgain: false,
+      skipCount: 0,
+      detailedGuideViewed: false
+    };
+  }
+
+  // オンボーディングデータの保存
+  function saveOnboardingData(updates) {
+    try {
+      const data = loadOnboardingData();
+      const newData = {
+        ...data,
+        ...updates,
+        version: ONBOARDING_VERSION,
+        lastShown: Date.now()
+      };
+      localStorage.setItem(STORAGE_KEYS.ONBOARDING, JSON.stringify(newData));
+    } catch (e) {
+      console.error('オンボーディングデータの保存に失敗', e);
+    }
+  }
+
+  // バージョンデータの読み込み
+  function loadVersionData() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.APP_VERSION);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.warn('バージョンデータの読み込みに失敗', e);
+    }
+
+    return {
+      current: APP_VERSION,
+      lastSeenVersion: null,
+      whatsNewShown: {}
+    };
+  }
+
+  // バージョンデータの保存
+  function saveVersionData(updates) {
+    try {
+      const data = loadVersionData();
+      const newData = { ...data, ...updates };
+      localStorage.setItem(STORAGE_KEYS.APP_VERSION, JSON.stringify(newData));
+    } catch (e) {
+      console.error('バージョンデータの保存に失敗', e);
+    }
+  }
+
+  // バージョン更新のチェック（新機能通知用）
+  function checkVersionUpdate(versionData) {
+    if (!versionData.lastSeenVersion) {
+      // 初回インストール
+      saveVersionData({
+        current: APP_VERSION,
+        lastSeenVersion: APP_VERSION,
+        whatsNewShown: { [APP_VERSION]: true }
+      });
+      return;
+    }
+
+    // バージョンが上がっている場合（将来の拡張用）
+    if (versionData.lastSeenVersion !== APP_VERSION) {
+      const whatsNewShown = versionData.whatsNewShown || {};
+
+      if (!whatsNewShown[APP_VERSION]) {
+        // 新機能通知を表示（将来実装）
+        // showWhatsNew(APP_VERSION);
+
+        // 表示済みフラグ
+        whatsNewShown[APP_VERSION] = true;
+        saveVersionData({
+          current: APP_VERSION,
+          lastSeenVersion: APP_VERSION,
+          whatsNewShown: whatsNewShown
+        });
+      }
+    }
+  }
+
+  // 設定画面の「使い方ガイド」ボタンの設定
+  function setupGuideButton() {
+    const guideBtn = document.getElementById('showGuideBtn');
+    if (guideBtn) {
+      guideBtn.addEventListener('click', () => {
+        // 設定モーダルを閉じる
+        if (apiModal) {
+          apiModal.setAttribute('aria-hidden', 'true');
+        }
+
+        // オンボーディングを表示
+        setTimeout(() => {
+          showOnboarding();
+        }, 300);
+      });
+    }
+  }
+
+  // ============================================================================
+  // END OF ONBOARDING SYSTEM
+  // ============================================================================
+
   // init
-  loadApiKeys();
+  checkAndShowOnboarding(); // オンボーディングチェックから開始
+  setupGuideButton(); // 使い方ガイドボタンの設定
 });
