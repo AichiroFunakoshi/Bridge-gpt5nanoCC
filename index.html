@@ -111,7 +111,16 @@
       <p class="modal-desc-small">キーはブラウザのローカルに保存されます。</p>
 
       <label for="openaiKey" class="input-label">OpenAI API Key</label>
-      <input id="openaiKey" type="text" class="input-field" placeholder="sk-..." autocomplete="off" />
+      <input id="openaiKey" type="password" class="input-field" placeholder="sk-..." autocomplete="off" />
+
+      <!-- ヘルプ・ガイドセクション -->
+      <div class="help-section">
+        <h4 class="section-title">ヘルプ・ガイド</h4>
+        <button id="showGuideBtn" class="btn-guide">
+          <span class="guide-icon">📖</span>
+          <span class="guide-text">使い方ガイドを見る</span>
+        </button>
+      </div>
 
       <!-- デバウンス最適化セクション -->
       <div class="debounce-section">
@@ -146,6 +155,93 @@
     </div>
   </div>
 
+  <!-- オンボーディングモーダル -->
+  <div id="onboardingModal" class="onboarding-modal" aria-hidden="true" aria-labelledby="onboardingTitle" role="dialog" aria-modal="true">
+    <div class="onboarding-content">
+      <!-- 進捗ドット -->
+      <div class="onboarding-progress">
+        <span class="progress-dot active" data-screen="0"></span>
+        <span class="progress-dot" data-screen="1"></span>
+      </div>
+
+      <!-- 画面1: ようこそ -->
+      <div class="onboarding-screen" data-screen="0">
+        <div class="onboarding-icon">🌉</div>
+        <h2 id="onboardingTitle" class="onboarding-title">Bridge へようこそ</h2>
+        <p class="onboarding-subtitle">リアルタイム音声翻訳アプリ</p>
+
+        <div class="onboarding-steps">
+          <div class="onboarding-step">
+            <span class="step-icon">🎤</span>
+            <div class="step-content">
+              <h3 class="step-title">話す</h3>
+              <p class="step-desc">マイクに向かって自然に話すだけ</p>
+            </div>
+          </div>
+
+          <div class="onboarding-step">
+            <span class="step-icon">⚡</span>
+            <div class="step-content">
+              <h3 class="step-title">翻訳</h3>
+              <p class="step-desc">AIが瞬時に翻訳処理</p>
+            </div>
+          </div>
+
+          <div class="onboarding-step">
+            <span class="step-icon">💬</span>
+            <div class="step-content">
+              <h3 class="step-title">表示</h3>
+              <p class="step-desc">原文と翻訳を同時表示</p>
+            </div>
+          </div>
+        </div>
+
+        <p class="onboarding-tip">💡 使うほど翻訳速度が向上します</p>
+      </div>
+
+      <!-- 画面2: APIキー設定 -->
+      <div class="onboarding-screen" data-screen="1" style="display: none;">
+        <div class="onboarding-icon">🔑</div>
+        <h2 class="onboarding-title">APIキーを設定</h2>
+        <p class="onboarding-subtitle">翻訳には OpenAI の APIキーが必要です</p>
+
+        <div class="onboarding-guide">
+          <h3 class="guide-title">💡 APIキーの取得方法</h3>
+          <ol class="guide-steps">
+            <li>OpenAI にログイン</li>
+            <li>API Keys から作成</li>
+            <li>下記に貼り付け</li>
+          </ol>
+          <div class="guide-links">
+            <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" class="guide-link">
+              → OpenAI API Keys ページを開く
+            </a>
+          </div>
+        </div>
+
+        <div class="onboarding-input-group">
+          <label for="onboardingApiKey" class="onboarding-label">OpenAI API Key</label>
+          <input id="onboardingApiKey" type="password" class="onboarding-input" placeholder="sk-..." autocomplete="off" />
+        </div>
+
+        <label class="onboarding-checkbox">
+          <input type="checkbox" id="dontShowOnboarding" />
+          <span>次回から表示しない</span>
+        </label>
+      </div>
+
+      <!-- ボタンエリア -->
+      <div class="onboarding-actions">
+        <button id="onboardingSkip" class="onboarding-btn onboarding-btn-text">スキップ</button>
+        <div class="onboarding-nav">
+          <button id="onboardingBack" class="onboarding-btn onboarding-btn-secondary" style="display: none;">← 戻る</button>
+          <button id="onboardingNext" class="onboarding-btn onboarding-btn-primary">次へ →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="onboarding.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

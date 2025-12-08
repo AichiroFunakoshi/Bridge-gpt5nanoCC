@@ -586,9 +586,9 @@ document.addEventListener('DOMContentLoaded', () => {
   saveApiKeysBtn?.addEventListener('click', () => {
     const k = (openaiKeyInput.value || '').trim();
     if (!k) { alert('OpenAI APIキーを入力してください。'); return; }
-    // APIキー形式検証（sk-で始まるか、適切な長さチェック）
-    if (!k.startsWith('sk-') || k.length < 40) {
-      alert('無効なOpenAI APIキー形式です。\nAPIキーは「sk-」で始まり、40文字以上である必要があります。');
+    // APIキー形式検証（sk-proj- などの新形式にも対応）
+    if (!k.startsWith('sk-')) {
+      alert('無効なOpenAI APIキー形式です。\nAPIキーは「sk-」で始まる必要があります。');
       return;
     }
     localStorage.setItem('translatorOpenaiKey', k);
