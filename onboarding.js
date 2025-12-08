@@ -67,7 +67,7 @@
     if (!data.completed || !data.dontShowAgain) {
       // ただし、APIキーが既に設定されている場合はスキップ
       const existingApiKey = localStorage.getItem('translatorOpenaiKey');
-      if (existingApiKey && existingApiKey.length > 0) {
+      if (existingApiKey?.trim().length > 0) {
         // APIキーあり → オンボーディング完了扱い
         saveOnboardingData({ completed: true });
         return;
@@ -177,9 +177,9 @@
     const apiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
 
     if (apiKey) {
-      // APIキー形式検証
-      if (!apiKey.startsWith('sk-') || apiKey.length < 40) {
-        alert('無効なOpenAI APIキー形式です。\nAPIキーは「sk-」で始まり、40文字以上である必要があります。');
+      // APIキー形式検証（sk-proj- などの新形式にも対応）
+      if (!apiKey.startsWith('sk-')) {
+        alert('無効なOpenAI APIキー形式です。\nAPIキーは「sk-」で始まる必要があります。');
         return;
       }
 
