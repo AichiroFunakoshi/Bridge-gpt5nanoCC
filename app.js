@@ -1036,7 +1036,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let onboardingBtnNext, onboardingBtnBack, onboardingBtnSkip;
   let onboardingApiKeyInput, onboardingDontShowCheckbox;
   let currentOnboardingScreen = 0;
-  const totalOnboardingScreens = 2; // 画面数
+  let totalOnboardingScreens = 0; // DOM読み込み後に動的に設定
 
   // オンボーディングDOM要素の取得
   function initOnboardingDOM() {
@@ -1054,6 +1054,9 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('オンボーディング要素が見つかりません。オンボーディング機能は無効化されます。');
       return false;
     }
+
+    // 画面数を動的に取得
+    totalOnboardingScreens = onboardingScreens.length;
 
     return true;
   }
@@ -1119,14 +1122,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // オンボーディング画面更新
   function updateOnboardingScreen() {
-    // 画面の表示/非表示
+    // 画面の表示/非表示（CSSクラスのみで制御）
     onboardingScreens.forEach((screen, index) => {
       if (index === currentOnboardingScreen) {
         screen.classList.add('active');
-        screen.style.display = 'block';
       } else {
         screen.classList.remove('active');
-        screen.style.display = 'none';
       }
     });
 
