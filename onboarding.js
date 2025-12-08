@@ -23,7 +23,10 @@
 
   // 初期化
   document.addEventListener('DOMContentLoaded', () => {
-    initDOM();
+    if (!initDOM()) {
+      console.warn('オンボーディング要素が見つかりません。オンボーディング機能は無効化されます。');
+      return;
+    }
     initEventListeners();
     checkAndShowOnboarding();
     setupGuideButton();
@@ -39,6 +42,13 @@
     btnSkip = document.getElementById('onboardingSkip');
     apiKeyInput = document.getElementById('onboardingApiKey');
     dontShowCheckbox = document.getElementById('dontShowOnboarding');
+
+    // 必須要素の存在確認
+    if (!modal || screens.length === 0 || progressDots.length === 0) {
+      return false;
+    }
+
+    return true;
   }
 
   // イベントリスナーの設定
@@ -91,8 +101,10 @@
     // 画面の表示/非表示
     screens.forEach((screen, index) => {
       if (index === currentScreen) {
+        screen.classList.add('active');
         screen.style.display = 'block';
       } else {
+        screen.classList.remove('active');
         screen.style.display = 'none';
       }
     });

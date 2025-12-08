@@ -111,7 +111,7 @@
       <p class="modal-desc-small">キーはブラウザのローカルに保存されます。</p>
 
       <label for="openaiKey" class="input-label">OpenAI API Key</label>
-      <input id="openaiKey" type="text" class="input-field" placeholder="sk-..." autocomplete="off" />
+      <input id="openaiKey" type="password" class="input-field" placeholder="sk-..." autocomplete="off" />
 
       <!-- ヘルプ・ガイドセクション -->
       <div class="help-section">
@@ -156,7 +156,7 @@
   </div>
 
   <!-- オンボーディングモーダル -->
-  <div id="onboardingModal" class="onboarding-modal" aria-hidden="true" role="dialog" aria-modal="true">
+  <div id="onboardingModal" class="onboarding-modal" aria-hidden="true" aria-labelledby="onboardingTitle" role="dialog" aria-modal="true">
     <div class="onboarding-content">
       <!-- 進捗ドット -->
       <div class="onboarding-progress">
@@ -167,7 +167,7 @@
       <!-- 画面1: ようこそ -->
       <div class="onboarding-screen" data-screen="0">
         <div class="onboarding-icon">🌉</div>
-        <h2 class="onboarding-title">Bridge へようこそ</h2>
+        <h2 id="onboardingTitle" class="onboarding-title">Bridge へようこそ</h2>
         <p class="onboarding-subtitle">リアルタイム音声翻訳アプリ</p>
 
         <div class="onboarding-steps">
@@ -221,7 +221,7 @@
 
         <div class="onboarding-input-group">
           <label for="onboardingApiKey" class="onboarding-label">OpenAI API Key</label>
-          <input id="onboardingApiKey" type="text" class="onboarding-input" placeholder="sk-..." autocomplete="off" />
+          <input id="onboardingApiKey" type="password" class="onboarding-input" placeholder="sk-..." autocomplete="off" />
         </div>
 
         <label class="onboarding-checkbox">

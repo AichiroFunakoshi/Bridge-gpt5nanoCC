@@ -849,12 +849,7 @@ body {
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
-.onboarding-screen[data-screen].active {
-  opacity: 1;
-  visibility: visible;
-}
-
-.onboarding-screen:not([style*="display: none"]) {
+.onboarding-screen.active {
   opacity: 1;
   visibility: visible;
 }
