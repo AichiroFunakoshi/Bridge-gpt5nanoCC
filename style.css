@@ -792,21 +792,18 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(245, 245, 247, 0.98); /* 薄いグレー背景 */
-  display: flex;
+  display: none; /* デフォルトは完全に非表示 */
   justify-content: center;
   align-items: center;
   z-index: 2000;
   padding: 20px;
   opacity: 0;
-  visibility: hidden;
-  pointer-events: none; /* 非表示時はクリックイベントを透過 */
-  transition: opacity 0.3s ease, visibility 0.3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .onboarding-modal[aria-hidden="false"] {
+  display: flex; /* 表示時のみdisplay: flex */
   opacity: 1;
-  visibility: visible;
-  pointer-events: auto; /* 表示時はクリックイベントを受け付ける */
 }
 
 .onboarding-content {
