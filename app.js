@@ -1224,6 +1224,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // スキップ回数をカウント（将来の分析用）
     const data = loadOnboardingData();
     data.skipCount = (data.skipCount || 0) + 1;
+    data.completed = true; // スキップしても完了扱いにして次回表示を防ぐ
     saveOnboardingData(data);
 
     hideOnboarding();
@@ -1233,23 +1234,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 完了処理
   function handleOnboardingComplete() {
-    // APIキーの保存（新規入力がある場合）
-    const apiKey = onboardingApiKeyInput ? onboardingApiKeyInput.value.trim() : '';
+    // 新規入力されたAPIキーを取得
+    const newApiKey = onboardingApiKeyInput?.value.trim() || '';
 
-    if (apiKey) {
+    // 新規入力があれば検証して保存
+    if (newApiKey) {
       // APIキー形式検証（sk-proj- などの新形式にも対応）
-      if (!apiKey.startsWith('sk-')) {
+      if (!newApiKey.startsWith('sk-')) {
         alert('無効なOpenAI APIキー形式です。\nAPIキーは「sk-」で始まる必要があります。');
         return;
       }
 
       // 保存
-      localStorage.setItem('translatorOpenaiKey', apiKey);
-      OPENAI_API_KEY = apiKey; // グローバル変数を更新
+      localStorage.setItem('translatorOpenaiKey', newApiKey);
     }
 
     // オンボーディングデータの保存
-    const dontShow = onboardingDontShowCheckbox ? onboardingDontShowCheckbox.checked : false;
+    const dontShow = onboardingDontShowCheckbox?.checked || false;
     saveOnboardingData({
       completed: true,
       dontShowAgain: dontShow
@@ -1258,10 +1259,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // モーダルを閉じる
     hideOnboarding();
 
-    // 既存キーを確認（新規入力がなくても既存キーがあればアプリを起動）
-    const existingKey = localStorage.getItem('translatorOpenaiKey');
-    if (existingKey?.trim()) {
-      OPENAI_API_KEY = existingKey.trim();
+    // 有効なAPIキーを取得（新規入力または既存キー）
+    const effectiveKey = localStorage.getItem('translatorOpenaiKey')?.trim();
+    if (effectiveKey) {
+      OPENAI_API_KEY = effectiveKey;
       initializeApp();
     } else {
       // 本当にキーがない場合のみ設定モーダル表示
@@ -1375,6 +1376,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const guideBtn = document.getElementById('showGuideBtn');
     if (guideBtn) {
       guideBtn.addEventListener('click', () => {
+        // 詳細ガイド閲覧フラグを更新（将来の分析用）
+        const data = loadOnboardingData();
+        data.detailedGuideViewed = true;
+        saveOnboardingData(data);
+
         // 設定モーダルを閉じる
         if (apiModal) {
           apiModal.setAttribute('aria-hidden', 'true');
