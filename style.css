@@ -799,12 +799,14 @@ body {
   padding: 20px;
   opacity: 0;
   visibility: hidden;
+  pointer-events: none;
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .onboarding-modal[aria-hidden="false"] {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 .onboarding-content {
@@ -844,12 +846,14 @@ body {
 
 /* 画面遷移 */
 .onboarding-screen {
+  display: none;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .onboarding-screen.active {
+  display: block;
   opacity: 1;
   visibility: visible;
 }
